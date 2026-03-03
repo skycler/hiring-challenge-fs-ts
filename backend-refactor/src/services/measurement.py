@@ -33,7 +33,11 @@ class MeasurementService:
         from_date: datetime | None = None,
         to_date: datetime | None = None,
     ) -> list[Measurement]:
-        """Return measurements filtered by signal IDs and optional date range."""
+        """Return measurements filtered by signal IDs and optional date range.
+
+        Both ``from_date`` and ``to_date`` bounds are inclusive (``>=`` and
+        ``<=`` respectively).
+        """
         all_measurements = self._provider.load_measurements()
         signal_id_set = set(signal_ids)
 

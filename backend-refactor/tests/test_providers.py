@@ -174,6 +174,20 @@ class TestFileSystemProviderSignals:
         assert r1 is r2
         m.assert_called_once()
 
+    def test_file_not_found(self):
+        provider = FileSystemProvider()
+        with (
+            patch("providers.filesystem.open", side_effect=FileNotFoundError),
+            pytest.raises(FileNotFoundError),
+        ):
+            provider.load_signals()
+
+    def test_invalid_json(self):
+        m = mock_open(read_data="NOT VALID JSON")
+        provider = FileSystemProvider()
+        with patch("providers.filesystem.open", m), pytest.raises(json.JSONDecodeError):
+            provider.load_signals()
+
 
 # ---------------------------------------------------------------------------
 # FileSystemProvider — assets
@@ -215,6 +229,20 @@ class TestFileSystemProviderAssets:
             r2 = provider.load_assets()
         assert r1 is r2
         m.assert_called_once()
+
+    def test_file_not_found(self):
+        provider = FileSystemProvider()
+        with (
+            patch("providers.filesystem.open", side_effect=FileNotFoundError),
+            pytest.raises(FileNotFoundError),
+        ):
+            provider.load_assets()
+
+    def test_invalid_json(self):
+        m = mock_open(read_data="{bad json}")
+        provider = FileSystemProvider()
+        with patch("providers.filesystem.open", m), pytest.raises(json.JSONDecodeError):
+            provider.load_assets()
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +290,21 @@ class TestFileSystemProviderMeasurements:
             r2 = provider.load_measurements()
         assert r1 is r2
         m.assert_called_once()
+
+    def test_file_not_found(self):
+        provider = FileSystemProvider()
+        with (
+            patch("providers.filesystem.open", side_effect=FileNotFoundError),
+            pytest.raises(FileNotFoundError),
+        ):
+            provider.load_measurements()
+
+    def test_malformed_csv_missing_column(self):
+        bad_csv = "Ts|WrongColumn\n2021-11-07 23:59:03.762|100\n"
+        m = mock_open(read_data=bad_csv)
+        provider = FileSystemProvider()
+        with patch("providers.filesystem.open", m), pytest.raises(KeyError):
+            provider.load_measurements()
 
 
 # ---------------------------------------------------------------------------
