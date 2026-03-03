@@ -1,4 +1,4 @@
-"""Measurement service -- business logic for measurements and statistics.
+"""Measurement service — business logic for measurements and statistics.
 
 Filtering by signal IDs and date range is business logic and lives here,
 not in the data provider.  The provider is injected so the service is
@@ -24,7 +24,7 @@ class MeasurementService:
         self._provider = provider
 
     # ------------------------------------------------------------------
-    # Filtering (moved here from the old db layer — it's business logic)
+    # Filtering
     # ------------------------------------------------------------------
 
     def _filter_measurements(

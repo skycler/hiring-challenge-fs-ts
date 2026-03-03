@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Application settings, loaded from environment variables and ``.env``."""
+
     app_name: str = "AssetAPI"
     api_version: str = "v1"
     debug: bool = False

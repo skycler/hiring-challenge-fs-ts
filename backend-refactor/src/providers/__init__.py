@@ -1,9 +1,4 @@
-"""Providers package — data access abstraction.
-
-Exports the :class:`DataProvider` ABC, the :class:`FileSystemProvider`
-concrete implementation, and the :func:`get_provider` dependency callable
-used with FastAPI's ``Depends()``.
-"""
+"""Providers package — data access abstraction."""
 
 from providers.base import DataProvider
 from providers.filesystem import FileSystemProvider
@@ -27,6 +22,3 @@ def get_provider() -> DataProvider:
     if _provider is None:
         _provider = FileSystemProvider()
     return _provider
-
-
-__all__ = ["DataProvider", "FileSystemProvider", "get_provider"]

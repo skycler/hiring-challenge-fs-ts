@@ -6,12 +6,11 @@ constructor injection.  Tests use a stub provider with inlined data.
 
 from datetime import datetime
 
-from models.asset import Asset
+from conftest import StubProvider
 from models.measurement import Measurement, MeasurementList
-from models.signal import Signal, SignalStats
-from providers.base import DataProvider
+from models.signal import SignalStats
 from services import get_measurement_service
-from services.measurement_svc import MeasurementService
+from services.measurement import MeasurementService
 
 # ---------------------------------------------------------------------------
 # Inline fixtures
@@ -25,29 +24,6 @@ _MEASUREMENTS = [
 ]
 
 
-class StubProvider(DataProvider):
-    """In-memory provider for testing."""
-
-    def __init__(
-        self,
-        signals: list[Signal] | None = None,
-        assets: list[Asset] | None = None,
-        measurements: list[Measurement] | None = None,
-    ) -> None:
-        self._signals = signals or []
-        self._assets = assets or []
-        self._measurements = measurements or []
-
-    def load_signals(self) -> list[Signal]:
-        return self._signals
-
-    def load_assets(self) -> list[Asset]:
-        return self._assets
-
-    def load_measurements(self) -> list[Measurement]:
-        return self._measurements
-
-
 def _make_svc(measurements: list[Measurement] | None = None) -> MeasurementService:
     return MeasurementService(StubProvider(measurements=measurements or _MEASUREMENTS))
 
@@ -57,7 +33,7 @@ def _make_empty_svc() -> MeasurementService:
 
 
 # ---------------------------------------------------------------------------
-# get_measurements — filtering tests (moved from old test_db.py)
+# get_measurements — filtering tests
 # ---------------------------------------------------------------------------
 
 

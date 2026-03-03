@@ -2,7 +2,7 @@
 
 Endpoints
 ---------
-- ``GET /measurements?signal_ids=1,2,3`` -- measurements for multiple signals
+- ``GET /measurements?signal_ids=1,2,3`` — measurements for multiple signals
 """
 
 from datetime import datetime
@@ -11,9 +11,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.measurement import MeasurementList
 from services import get_measurement_service
-from services.measurement_svc import MeasurementService
+from services.measurement import MeasurementService
 
 router = APIRouter(prefix="/measurements", tags=["measurements"])
+
+
+def _validate_date_range(from_date: datetime | None, to_date: datetime | None) -> None:
+    """Raise 400 if both dates are given and ``from_date >= to_date``."""
+    if from_date is not None and to_date is not None and from_date >= to_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date range: 'from' must be before 'to'",
+        )
 
 
 @router.get("", response_model=MeasurementList, response_model_by_alias=False)
@@ -36,10 +45,6 @@ async def get_measurements(
     except ValueError:
         raise HTTPException(status_code=400, detail="All signal_ids must be integers") from None
 
-    if from_date is not None and to_date is not None and from_date >= to_date:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid date range: 'from' must be before 'to'",
-        )
+    _validate_date_range(from_date, to_date)
 
     return svc.get_measurements(id_list, from_date, to_date)

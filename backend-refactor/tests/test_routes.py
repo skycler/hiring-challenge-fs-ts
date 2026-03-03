@@ -10,13 +10,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import create_app
+from conftest import StubProvider
 from models.asset import Asset
 from models.measurement import Measurement
 from models.signal import Signal
 from providers import get_provider
-from providers.base import DataProvider
 from services import get_measurement_service
-from services.measurement_svc import MeasurementService
+from services.measurement import MeasurementService
 
 # ---------------------------------------------------------------------------
 # Inline fixtures
@@ -56,21 +56,11 @@ _MEASUREMENTS = [
     Measurement(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=200.0),
 ]
 
-
-class _StubProvider(DataProvider):
-    """In-memory provider for route tests."""
-
-    def load_signals(self) -> list[Signal]:
-        return _SIGNALS
-
-    def load_assets(self) -> list[Asset]:
-        return _ASSETS
-
-    def load_measurements(self) -> list[Measurement]:
-        return _MEASUREMENTS
-
-
-_stub_provider = _StubProvider()
+_stub_provider = StubProvider(
+    signals=_SIGNALS,
+    assets=_ASSETS,
+    measurements=_MEASUREMENTS,
+)
 
 
 @pytest.fixture()

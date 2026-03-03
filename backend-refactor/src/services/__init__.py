@@ -1,10 +1,10 @@
-"""Services package -- business logic layer."""
+"""Services package — business logic layer."""
 
 from fastapi import Depends
 
 from providers import get_provider
 from providers.base import DataProvider
-from services.measurement_svc import MeasurementService
+from services.measurement import MeasurementService
 
 
 def get_measurement_service(
@@ -16,6 +16,3 @@ def get_measurement_service(
     automatically injected by FastAPI's dependency system.
     """
     return MeasurementService(provider)
-
-
-__all__ = ["MeasurementService", "get_measurement_service"]
