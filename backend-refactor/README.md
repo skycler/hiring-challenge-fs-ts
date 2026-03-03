@@ -45,3 +45,25 @@ docker run -d --rm --name asset-api -p 8000:8000 asset-api
 ```
 
 - Introduce *uv.lock* file to lock dependencies and ensure reproducible builds. Update the dependencies with `uv lock` and commit the changes to version control.
+
+## Understanding the Endpoints and Data Model (10min)
+- Inspecting swagger page at http://localhost:8000/docs to understand the available endpoints and their functionality
+- huge mess! duplication of endpoints, v1 vs v2, easter egg within the health endpoint, etc.
+- /assets endpoint does not return the assets, but instead returns signal information.
+- /measurements endpoint (returning a list of data points): does not work at all!
+- data models are very simple, no default values, no validation, no documentation, etc. should all be done with pydantic models.
+- data persistence: all data is read from files, which is not ideal for production. No typing at all, which makes it hard to understand the code and maintain it.
+- almost no business logic - just reading json files and returning the data. No error handling, no validation, no logging, etc.
+  
+I see the following use-cases:
+- get a health check (GET /health)
+- get a list of all assets (GET /assets)
+- get a list of all signals for an asset (GET /assets/{asset_id}/signals)
+- get a list of all signals (GET /signals)
+- get details for a signal (GET /signals/{signal_id})
+- get stats for a signal (GET /signals/{signal_id}/stats)
+- get measurements for a signal (GET /signals/{signal_id}/measurements)
+- get measurements for a list of signals (GET /measurements?signal_ids=1,2,3)
+
+*UPDATING THE INITIAL PLAN* not adding tests first (it's too messy and too simple), cleaning up first and then adding tests.
+
