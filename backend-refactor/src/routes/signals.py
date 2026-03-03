@@ -45,7 +45,12 @@ async def get_signals(provider: DataProvider = Depends(get_provider)) -> list[Si
     return provider.load_signals()
 
 
-@router.get("/{signal_id}", response_model=Signal, response_model_by_alias=False)
+@router.get(
+    "/{signal_id}",
+    response_model=Signal,
+    response_model_by_alias=False,
+    responses={404: {"description": "Signal not found"}},
+)
 async def get_signal(
     signal_id: int,
     provider: DataProvider = Depends(get_provider),
@@ -54,7 +59,15 @@ async def get_signal(
     return _find_signal(signal_id, provider.load_signals())
 
 
-@router.get("/{signal_id}/stats", response_model=SignalStats, response_model_by_alias=False)
+@router.get(
+    "/{signal_id}/stats",
+    response_model=SignalStats,
+    response_model_by_alias=False,
+    responses={
+        400: {"description": "Invalid date range"},
+        404: {"description": "Signal not found"},
+    },
+)
 async def get_signal_stats(
     signal_id: int,
     from_date: datetime = Query(..., alias="from", description="Start datetime (ISO 8601)"),
@@ -69,7 +82,13 @@ async def get_signal_stats(
 
 
 @router.get(
-    "/{signal_id}/measurements", response_model=MeasurementList, response_model_by_alias=False
+    "/{signal_id}/measurements",
+    response_model=MeasurementList,
+    response_model_by_alias=False,
+    responses={
+        400: {"description": "Invalid date range"},
+        404: {"description": "Signal not found"},
+    },
 )
 async def get_signal_measurements(
     signal_id: int,

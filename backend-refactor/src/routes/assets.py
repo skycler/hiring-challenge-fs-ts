@@ -2,8 +2,8 @@
 
 Endpoints
 ---------
-- ``GET /assets`` -- list all assets
-- ``GET /assets/{asset_id}/signals`` -- list signals belonging to an asset
+- ``GET /assets`` — list all assets
+- ``GET /assets/{asset_id}/signals`` — list signals belonging to an asset
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,7 +22,12 @@ async def get_assets(provider: DataProvider = Depends(get_provider)) -> list[Ass
     return provider.load_assets()
 
 
-@router.get("/{asset_id}/signals", response_model=list[Signal], response_model_by_alias=False)
+@router.get(
+    "/{asset_id}/signals",
+    response_model=list[Signal],
+    response_model_by_alias=False,
+    responses={404: {"description": "Asset not found"}},
+)
 async def get_asset_signals(
     asset_id: int,
     provider: DataProvider = Depends(get_provider),

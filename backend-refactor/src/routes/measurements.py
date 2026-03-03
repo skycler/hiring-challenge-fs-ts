@@ -27,7 +27,15 @@ def _validate_date_range(from_date: datetime | None, to_date: datetime | None) -
         )
 
 
-@router.get("", response_model=MeasurementList, response_model_by_alias=False)
+@router.get(
+    "",
+    response_model=MeasurementList,
+    response_model_by_alias=False,
+    responses={
+        400: {"description": "Invalid signal IDs or date range"},
+        404: {"description": "One or more signals not found"},
+    },
+)
 async def get_measurements(
     signal_ids: str = Query(..., description="Comma-separated signal IDs"),
     from_date: datetime | None = Query(
