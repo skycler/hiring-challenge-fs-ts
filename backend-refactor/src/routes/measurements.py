@@ -10,6 +10,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.measurement import MeasurementList
+from providers import get_provider
+from providers.base import DataProvider
 from services import get_measurement_service
 from services.measurement import MeasurementService
 
@@ -32,6 +34,7 @@ async def get_measurements(
         None, alias="from", description="Start datetime (ISO 8601)"
     ),
     to_date: datetime | None = Query(None, alias="to", description="End datetime (ISO 8601)"),
+    provider: DataProvider = Depends(get_provider),
     svc: MeasurementService = Depends(get_measurement_service),
 ) -> MeasurementList:
     """Return measurements for the given signal IDs, optionally filtered by date range."""
@@ -44,6 +47,14 @@ async def get_measurements(
         id_list = [int(sid) for sid in stripped]
     except ValueError:
         raise HTTPException(status_code=400, detail="All signal_ids must be integers") from None
+
+    known_ids = {s.signal_id for s in provider.load_signals()}
+    unknown = [sid for sid in id_list if sid not in known_ids]
+    if unknown:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Signal(s) {unknown} not found",
+        )
 
     _validate_date_range(from_date, to_date)
 

@@ -231,3 +231,13 @@ class TestGetMeasurements:
         r = client.get("/measurements?signal_ids=abc")
         assert r.status_code == 400
         assert "integers" in r.json()["detail"]
+
+    def test_unknown_signal_ids_404(self, client):
+        r = client.get("/measurements?signal_ids=999")
+        assert r.status_code == 404
+        assert "999" in r.json()["detail"]
+
+    def test_mix_known_and_unknown_signal_ids_404(self, client):
+        r = client.get("/measurements?signal_ids=100,999")
+        assert r.status_code == 404
+        assert "999" in r.json()["detail"]
