@@ -21,9 +21,11 @@ COPY tests/ ./tests/
 RUN uv run pytest --tb=short -q
 
 # ---------------------------------------------------------------------------
-# production — prod deps + source only, no test code
+# production — prod deps + source + data, no test code
 # ---------------------------------------------------------------------------
 FROM base AS production
+
+COPY data/ ./data/
 
 EXPOSE 8000
 

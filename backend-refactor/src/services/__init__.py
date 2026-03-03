@@ -1,9 +1,21 @@
-"""Services package."""
-from services.asset_service import AssetService
-from services.measurement_svc import MeasurementService, get_measurements_for_signals
-from services import measurement_legacy
+"""Services package -- business logic layer."""
 
-__all__ = ["measurement_legacy",
-    "AssetService",
-    "MeasurementService", "get_measurements_for_signals"
-]
+from fastapi import Depends
+
+from providers import get_provider
+from providers.base import DataProvider
+from services.measurement_svc import MeasurementService
+
+
+def get_measurement_service(
+    provider: DataProvider = Depends(get_provider),
+) -> MeasurementService:
+    """FastAPI dependency that builds a :class:`MeasurementService`.
+
+    Chains onto :func:`providers.get_provider` so the provider is
+    automatically injected by FastAPI's dependency system.
+    """
+    return MeasurementService(provider)
+
+
+__all__ = ["MeasurementService", "get_measurement_service"]

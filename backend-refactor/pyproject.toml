@@ -8,8 +8,6 @@ dependencies = [
     "uvicorn[standard]==0.24.0",
     "pydantic==2.5.0",
     "pydantic-settings==2.1.0",
-    "python-dateutil==2.8.2",
-    "jinja2==3.1.2",
 ]
 
 [dependency-groups]
@@ -23,10 +21,10 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--cov=models --cov-report=term-missing --cov-fail-under=100"
+addopts = "--cov=models --cov=providers --cov=services --cov=routes --cov=settings --cov=app --cov-report=term-missing --cov-fail-under=100"
 
 [tool.coverage.run]
-source = ["models"]
+source = ["models", "providers", "services", "routes", "settings", "app"]
 
 [tool.coverage.report]
 show_missing = true
@@ -39,6 +37,10 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/routes/*.py" = ["B008"]  # Query() in function defaults is the FastAPI convention
+"src/services/__init__.py" = ["B008"]  # Depends() in function defaults is the FastAPI convention
 
 [tool.uv]
 index-url = "https://pypi.org/simple"

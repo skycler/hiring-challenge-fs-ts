@@ -13,7 +13,7 @@ class Asset(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    asset_id: str = Field(alias="AssetID", examples=["42"])
+    asset_id: int = Field(alias="AssetID", examples=[42])
     latitude: float = Field(alias="Latitude", examples=[46.9480])
     longitude: float = Field(alias="Longitude", examples=[7.4474])
     description: str = Field(alias="descri", examples=["UW Beispiel"])

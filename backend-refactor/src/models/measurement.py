@@ -17,7 +17,7 @@ class Measurement(BaseModel):
     model_config = {"populate_by_name": True}
 
     timestamp: datetime = Field(alias="Ts", examples=["2023-01-15T10:30:00.000000"])
-    signal_id: str = Field(alias="SignalId", examples=["100001"])
+    signal_id: int = Field(alias="SignalId", examples=[100001])
     value: float = Field(alias="MeasurementValue", examples=[230.5])
 
 

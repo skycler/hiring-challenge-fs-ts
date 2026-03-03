@@ -16,9 +16,9 @@ class Signal(BaseModel):
     model_config = {"populate_by_name": True}
 
     signal_g_id: str = Field(alias="SignalGId", examples=["a1b2c3d4-e5f6-7890-abcd-ef1234567890"])
-    signal_id: str = Field(alias="SignalId", examples=["100001"])
+    signal_id: int = Field(alias="SignalId", examples=[100001])
     signal_name: str = Field(alias="SignalName", examples=["EXMPL110STATION_L01"])
-    asset_id: str = Field(alias="AssetId", examples=["10"])
+    asset_id: int = Field(alias="AssetId", examples=[10])
     unit: str = Field(alias="Unit", examples=["kV"])
 
 
@@ -29,7 +29,7 @@ class SignalStats(BaseModel):
     Numeric fields are ``None`` when no measurements exist in the range.
     """
 
-    signal_id: str = Field(examples=["100001"])
+    signal_id: int = Field(examples=[100001])
     from_date: datetime = Field(examples=["2023-01-01T00:00:00"])
     to_date: datetime = Field(examples=["2023-01-31T23:59:59"])
     count: int = Field(examples=[150])

@@ -18,6 +18,7 @@ Todo:
 - check for security issues (e.g. SQL injection, XSS, etc.)
 - check for performance issues (e.g. slow queries, memory leaks, etc.)
 - refactor code if necessary (after adding tests)
+- add error handling and validation if necessary
 - add logging and monitoring if necessary
 - add documentation if necessary (e.g. API docs, code comments, etc.)
 
@@ -67,7 +68,7 @@ I see the following use-cases:
 
 *UPDATING THE INITIAL PLAN* not adding tests first (it's too messy and too simple), cleaning up first and then adding tests.
 
-## Refactoring (60min)
+## Refactoring (120min)
 - Remove the easter egg
 - Simplify/cleanup settings class
 - Write full pydantic models for all the data structures (assets, signals, measurements, etc.). Add new data model for Measurements (list of data points).
@@ -85,3 +86,6 @@ docker run --rm asset-api:test
 ```
 
 - delete unused/obsolete code (utils, utilities, helpers)
+- move data files to a dedicated directory (e.g., `data/`)
+- seperate concerns between data, business, and actual application logic
+- changing asset and signal ids to be ints instead of strings, which is more common and easier to work with
