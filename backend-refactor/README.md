@@ -46,7 +46,7 @@ docker run -d --rm --name asset-api -p 8000:8000 asset-api
 
 - Introduce *uv.lock* file to lock dependencies and ensure reproducible builds. Update the dependencies with `uv lock` and commit the changes to version control.
 
-## Understanding the Endpoints and Data Model (10min)
+## Understanding the Endpoints and Data Model (20min)
 - Inspecting swagger page at http://localhost:8000/docs to understand the available endpoints and their functionality
 - huge mess! duplication of endpoints, v1 vs v2, easter egg within the health endpoint, etc.
 - /assets endpoint does not return the assets, but instead returns signal information.
@@ -62,8 +62,26 @@ I see the following use-cases:
 - get a list of all signals (GET /signals)
 - get details for a signal (GET /signals/{signal_id})
 - get stats for a signal (GET /signals/{signal_id}/stats)
-- get measurements for a signal (GET /signals/{signal_id}/measurements)
-- get measurements for a list of signals (GET /measurements?signal_ids=1,2,3)
+- get a list of measurements for a signal (GET /signals/{signal_id}/measurements)
+- get a list of measurements for a list of signals (GET /measurements?signal_ids=1,2,3)
 
 *UPDATING THE INITIAL PLAN* not adding tests first (it's too messy and too simple), cleaning up first and then adding tests.
 
+## Refactoring (60min)
+- Remove the easter egg
+- Simplify/cleanup settings class
+- Write full pydantic models for all the data structures (assets, signals, measurements, etc.). Add new data model for Measurements (list of data points).
+- Add test framework, including test coverage.
+
+Run the tests locally with
+```
+uv run pytest -v
+```
+
+or in container with
+```
+docker build --target test -t asset-api:test .
+docker run --rm asset-api:test
+```
+
+- delete unused/obsolete code (utils, utilities, helpers)

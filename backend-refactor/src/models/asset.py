@@ -1,17 +1,19 @@
-"""Asset model definition."""
-from typing import List, Optional
-from pydantic import BaseModel
+"""Asset model."""
 
-class AssetModel(BaseModel):
-    """Asset model with signals."""
-    asset_id: str
-    signals: List[dict]
+from pydantic import BaseModel, Field
+
 
 class Asset(BaseModel):
-    """Alternative Asset representation."""
-    assetId: str
-    signalList: List[dict]
+    """A physical asset (substation) with geographic coordinates.
 
-def create_asset(asset_id: str, signals: list) -> AssetModel:
-    """Factory function to create asset."""
-    return AssetModel(asset_id=asset_id, signals=signals)
+    JSON data uses PascalCase keys — note the source file has ``AssetID``
+    (capital D), not ``AssetId``.  The ``descri`` field in the source data
+    is a truncated form of "description"; we accept both via alias.
+    """
+
+    model_config = {"populate_by_name": True}
+
+    asset_id: str = Field(alias="AssetID", examples=["42"])
+    latitude: float = Field(alias="Latitude", examples=[46.9480])
+    longitude: float = Field(alias="Longitude", examples=[7.4474])
+    description: str = Field(alias="descri", examples=["UW Beispiel"])
