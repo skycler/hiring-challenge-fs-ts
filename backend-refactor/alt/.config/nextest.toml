@@ -1,0 +1,4 @@
+[profile.ci]
+# Produce JUnit XML for CI consumption
+[profile.ci.junit]
+path = "junit.xml"

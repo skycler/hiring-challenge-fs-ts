@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "AssetAPI - Assets",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Asset endpoint integration tests."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "GET /assets returns all assets",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/assets",
+          "host": ["{{baseUrl}}"],
+          "path": ["assets"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns 3 assets', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array').with.lengthOf(3);",
+              "});",
+              "pm.test('asset has expected fields', () => {",
+              "  const a = pm.response.json()[0];",
+              "  pm.expect(a).to.have.all.keys('asset_id', 'latitude', 'longitude', 'description');",
+              "  pm.expect(a.asset_id).to.be.a('number');",
+              "  pm.expect(a.latitude).to.be.a('number');",
+              "  pm.expect(a.longitude).to.be.a('number');",
+              "  pm.expect(a.description).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /assets/1/signals returns signals for asset",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/assets/1/signals",
+          "host": ["{{baseUrl}}"],
+          "path": ["assets", "1", "signals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns array of signals', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array');",
+              "  pm.expect(json.length).to.be.greaterThan(0);",
+              "});",
+              "pm.test('all signals belong to asset 1', () => {",
+              "  pm.response.json().forEach(s => {",
+              "    pm.expect(s.asset_id).to.eql(1);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /assets/999/signals returns 404",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/assets/999/signals",
+          "host": ["{{baseUrl}}"],
+          "path": ["assets", "999", "signals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));",
+              "pm.test('body has detail', () => {",
+              "  pm.expect(pm.response.json().detail).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

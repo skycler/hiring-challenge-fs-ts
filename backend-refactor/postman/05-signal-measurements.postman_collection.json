@@ -1,0 +1,293 @@
+{
+  "info": {
+    "name": "AssetAPI - Signal Measurements",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Single-signal measurement endpoint integration tests."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "GET /signals/427038/measurements returns measurements",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('has pagination and measurements', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.total).to.be.a('number').and.to.be.greaterThan(0);",
+              "  pm.expect(json.count).to.be.a('number').and.to.be.greaterThan(0);",
+              "  pm.expect(json.limit).to.eql(1000);",
+              "  pm.expect(json.offset).to.eql(0);",
+              "  pm.expect(json.count).to.be.at.most(json.limit);",
+              "  pm.expect(json.measurements).to.be.an('array').with.lengthOf(json.count);",
+              "});",
+              "pm.test('measurement has expected fields', () => {",
+              "  const m = pm.response.json().measurements[0];",
+              "  pm.expect(m).to.have.all.keys('timestamp', 'signal_id', 'value');",
+              "  pm.expect(m.signal_id).to.eql(427038);",
+              "  pm.expect(m.value).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements with pagination",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00&limit=5&offset=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" },
+            { "key": "limit", "value": "5" },
+            { "key": "offset", "value": "10" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('respects limit and offset', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.limit).to.eql(5);",
+              "  pm.expect(json.offset).to.eql(10);",
+              "  pm.expect(json.count).to.eql(5);",
+              "  pm.expect(json.total).to.be.greaterThan(15);",
+              "  pm.expect(json.measurements).to.have.lengthOf(5);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements with date filter",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2021-11-08T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2021-11-08T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns filtered measurements', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.total).to.be.a('number').and.to.be.greaterThan(0);",
+              "  pm.expect(json.count).to.be.a('number').and.to.be.greaterThan(0);",
+              "  pm.expect(json.measurements).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/999999/measurements returns 404",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/999999/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "999999", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements with reversed dates returns 400",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-12-01T00:00:00&to=2021-01-01T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-12-01T00:00:00" },
+            { "key": "to", "value": "2021-01-01T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 400', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements missing required dates returns 422",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements?format=flat returns flat format",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00&format=flat",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" },
+            { "key": "format", "value": "flat" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('has flat format fields', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.all.keys('total', 'count', 'limit', 'offset', 'timestamps', 'signal_ids', 'values');",
+              "  pm.expect(json).to.not.have.property('measurements');",
+              "  pm.expect(json.timestamps).to.be.an('array');",
+              "  pm.expect(json.signal_ids).to.be.an('array');",
+              "  pm.expect(json.values).to.be.an('array');",
+              "});",
+              "pm.test('parallel arrays have same length as count', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.timestamps).to.have.lengthOf(json.count);",
+              "  pm.expect(json.signal_ids).to.have.lengthOf(json.count);",
+              "  pm.expect(json.values).to.have.lengthOf(json.count);",
+              "});",
+              "pm.test('all signal_ids are 427038', () => {",
+              "  pm.response.json().signal_ids.forEach(id => {",
+              "    pm.expect(id).to.eql(427038);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements?format=objects returns objects format",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00&format=objects",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" },
+            { "key": "format", "value": "objects" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('has objects format fields', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('measurements').that.is.an('array');",
+              "  pm.expect(json).to.not.have.property('timestamps');",
+              "  pm.expect(json).to.not.have.property('signal_ids');",
+              "  pm.expect(json).to.not.have.property('values');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/measurements?format=invalid returns 422",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/measurements?from=2021-11-07T00:00:00&to=2022-02-08T00:00:00&format=invalid",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "measurements"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2022-02-08T00:00:00" },
+            { "key": "format", "value": "invalid" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "info": {
+    "name": "AssetAPI - Signals",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Signal endpoint integration tests."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "GET /signals returns all signals",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns 4 signals', () => {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array').with.lengthOf(4);",
+              "});",
+              "pm.test('signal has expected fields', () => {",
+              "  const s = pm.response.json()[0];",
+              "  pm.expect(s).to.have.all.keys('signal_g_id', 'signal_id', 'signal_name', 'asset_id', 'unit');",
+              "  pm.expect(s.signal_id).to.be.a('number');",
+              "  pm.expect(s.asset_id).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038 returns the signal",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns correct signal', () => {",
+              "  const s = pm.response.json();",
+              "  pm.expect(s.signal_id).to.eql(427038);",
+              "  pm.expect(s.unit).to.eql('kV');",
+              "  pm.expect(s.asset_id).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/999999 returns 404",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/999999",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "999999"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));",
+              "pm.test('body has detail', () => {",
+              "  pm.expect(pm.response.json().detail).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

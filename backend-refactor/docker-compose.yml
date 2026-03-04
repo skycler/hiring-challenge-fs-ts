@@ -1,3 +1,23 @@
+x-reports-volume: &reports-volume ./reports:/reports
+
+x-integration-tests: &integration-tests
+  image: postman/newman:6-alpine
+  volumes:
+    - ./postman:/etc/newman:ro
+    - *reports-volume
+  entrypoint: ["/bin/sh", "-c"]
+  command:
+    - |
+      for f in /etc/newman/[0-9]*.postman_collection.json; do
+        name=$$(basename "$$f" .postman_collection.json)
+        echo "=== Running $$name ==="
+        newman run "$$f" \
+          --env-var "baseUrl=$$BASE_URL" \
+          --reporters cli,junit \
+          --reporter-junit-export "/reports/$${REPORT_PREFIX}$$name.xml" \
+        || exit 1
+      done
+
 services:
   api:
     build:
@@ -13,18 +33,50 @@ services:
       context: .
       target: test
     volumes:
-      - ./reports:/reports
+      - *reports-volume
 
   integration-tests:
-    image: postman/newman:6-alpine
+    <<: *integration-tests
     depends_on:
       api:
         condition: service_healthy
+    environment:
+      - BASE_URL=http://api:8000
+      - REPORT_PREFIX=integration-
+
+  # ---- Rust (alt) implementation ----
+
+  alt-api:
+    build:
+      context: ./alt
+      target: production
+      args:
+        - EXTRA_CA_CERT=${EXTRA_CA_CERT:-}
+    ports:
+      - "8001:8000"
     volumes:
-      - ./tests/integration:/etc/newman:ro
-      - ./reports:/reports
-    command: >
-      run /etc/newman/asset-api.postman_collection.json
-      --env-var "baseUrl=http://api:8000"
-      --reporters cli,junit
-      --reporter-junit-export /reports/integration-tests.xml
+      - ./data:/app/data:ro
+    environment:
+      - DATA_DIR=/app/data
+      - ASSETS_PATH=/app/data/assets.json
+      - SIGNALS_PATH=/app/data/signal.json
+      - MEASUREMENTS_PATH=/app/data/measurements.csv
+      - DEBUG=false
+
+  alt-unit-tests:
+    build:
+      context: ./alt
+      target: test
+      args:
+        - EXTRA_CA_CERT=${EXTRA_CA_CERT:-}
+    volumes:
+      - *reports-volume
+
+  alt-integration-tests:
+    <<: *integration-tests
+    depends_on:
+      alt-api:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://alt-api:8000
+      - REPORT_PREFIX=alt-

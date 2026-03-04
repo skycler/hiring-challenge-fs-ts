@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "AssetAPI - Signal Stats",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Signal statistics endpoint integration tests."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "GET /signals/427038/stats returns statistics",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/stats?from=2021-11-07T00:00:00&to=2021-12-01T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "stats"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2021-12-01T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('has stats fields', () => {",
+              "  const s = pm.response.json();",
+              "  pm.expect(s).to.have.all.keys('signal_id', 'from_date', 'to_date', 'count', 'mean', 'min', 'max', 'median', 'std_dev');",
+              "  pm.expect(s.signal_id).to.eql(427038);",
+              "  pm.expect(s.count).to.be.a('number').and.to.be.greaterThan(0);",
+              "  pm.expect(s.mean).to.be.a('number');",
+              "  pm.expect(s.min).to.be.a('number');",
+              "  pm.expect(s.max).to.be.a('number');",
+              "  pm.expect(s.median).to.be.a('number');",
+              "  pm.expect(s.std_dev).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/stats with no-data range returns zero count",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/stats?from=2099-01-01T00:00:00&to=2099-12-31T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "stats"],
+          "query": [
+            { "key": "from", "value": "2099-01-01T00:00:00" },
+            { "key": "to", "value": "2099-12-31T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('count is zero with null stats', () => {",
+              "  const s = pm.response.json();",
+              "  pm.expect(s.count).to.eql(0);",
+              "  pm.expect(s.mean).to.be.null;",
+              "  pm.expect(s.min).to.be.null;",
+              "  pm.expect(s.max).to.be.null;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/999999/stats returns 404",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/999999/stats?from=2021-11-07T00:00:00&to=2021-12-01T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "999999", "stats"],
+          "query": [
+            { "key": "from", "value": "2021-11-07T00:00:00" },
+            { "key": "to", "value": "2021-12-01T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/stats with reversed dates returns 400",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/stats?from=2021-12-01T00:00:00&to=2021-01-01T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "stats"],
+          "query": [
+            { "key": "from", "value": "2021-12-01T00:00:00" },
+            { "key": "to", "value": "2021-01-01T00:00:00" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 400', () => pm.response.to.have.status(400));",
+              "pm.test('body mentions date range', () => {",
+              "  pm.expect(pm.response.json().detail).to.include('date range');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /signals/427038/stats missing required params returns 422",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/signals/427038/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["signals", "427038", "stats"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
