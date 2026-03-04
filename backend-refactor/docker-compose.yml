@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      target: production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+
+  unit-tests:
+    build:
+      context: .
+      target: test
+    volumes:
+      - ./reports:/reports
+
+  integration-tests:
+    image: postman/newman:6-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./tests/integration:/etc/newman:ro
+      - ./reports:/reports
+    command: >
+      run /etc/newman/asset-api.postman_collection.json
+      --env-var "baseUrl=http://api:8000"
+      --reporters cli,junit
+      --reporter-junit-export /reports/integration-tests.xml

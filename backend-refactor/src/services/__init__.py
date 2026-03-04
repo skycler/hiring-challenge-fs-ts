@@ -4,7 +4,23 @@ from fastapi import Depends
 
 from providers import get_provider
 from providers.base import DataProvider
+from services.asset import AssetService
 from services.measurement import MeasurementService
+from services.signal import SignalService
+
+
+def get_asset_service(
+    provider: DataProvider = Depends(get_provider),
+) -> AssetService:
+    """FastAPI dependency that builds an :class:`AssetService`."""
+    return AssetService(provider)
+
+
+def get_signal_service(
+    provider: DataProvider = Depends(get_provider),
+) -> SignalService:
+    """FastAPI dependency that builds a :class:`SignalService`."""
+    return SignalService(provider)
 
 
 def get_measurement_service(

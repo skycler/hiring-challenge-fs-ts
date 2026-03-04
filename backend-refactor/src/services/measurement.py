@@ -6,6 +6,7 @@ decoupled from any specific storage backend.
 """
 
 import statistics
+from collections import defaultdict
 from datetime import datetime
 
 from models.measurement import Measurement, MeasurementList
@@ -16,12 +17,29 @@ from providers.base import DataProvider
 class MeasurementService:
     """Business logic for measurements: filtering, stats calculation.
 
+    Measurements are indexed by ``signal_id`` on first access for O(1)
+    lookups instead of scanning the entire dataset on every request.
+
     Args:
         provider: The data provider to load raw measurements from.
     """
 
     def __init__(self, provider: DataProvider) -> None:
         self._provider = provider
+        self._index: dict[int, list[Measurement]] | None = None
+
+    # ------------------------------------------------------------------
+    # Indexing
+    # ------------------------------------------------------------------
+
+    def _get_index(self) -> dict[int, list[Measurement]]:
+        """Return (and lazily build) the signal_id → measurements index."""
+        if self._index is None:
+            idx: dict[int, list[Measurement]] = defaultdict(list)
+            for m in self._provider.load_measurements():
+                idx[m.signal_id].append(m)
+            self._index = dict(idx)
+        return self._index
 
     # ------------------------------------------------------------------
     # Filtering
@@ -35,13 +53,14 @@ class MeasurementService:
     ) -> list[Measurement]:
         """Return measurements filtered by signal IDs and optional date range.
 
-        Both ``from_date`` and ``to_date`` bounds are inclusive (``>=`` and
-        ``<=`` respectively).
+        Uses a signal_id index for fast lookup.  Both ``from_date`` and
+        ``to_date`` bounds are inclusive (``>=`` and ``<=`` respectively).
         """
-        all_measurements = self._provider.load_measurements()
-        signal_id_set = set(signal_ids)
+        index = self._get_index()
 
-        result = [m for m in all_measurements if m.signal_id in signal_id_set]
+        result: list[Measurement] = []
+        for sid in signal_ids:
+            result.extend(index.get(sid, []))
 
         if from_date is not None:
             result = [m for m in result if m.timestamp >= from_date]
@@ -49,6 +68,16 @@ class MeasurementService:
             result = [m for m in result if m.timestamp <= to_date]
 
         return result
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def validate_date_range(from_date: datetime, to_date: datetime) -> None:
+        """Raise :class:`ValueError` if ``from_date >= to_date``."""
+        if from_date >= to_date:
+            raise ValueError("Invalid date range: 'from' must be before 'to'")
 
     # ------------------------------------------------------------------
     # Public API
@@ -59,10 +88,25 @@ class MeasurementService:
         signal_ids: list[int],
         from_date: datetime | None = None,
         to_date: datetime | None = None,
+        *,
+        limit: int = 1000,
+        offset: int = 0,
     ) -> MeasurementList:
-        """Get measurements for signals in an optional date range."""
-        measurements = self._filter_measurements(signal_ids, from_date, to_date)
-        return MeasurementList(count=len(measurements), measurements=measurements)
+        """Get measurements for signals in an optional date range.
+
+        Results are paginated via ``limit`` / ``offset``.  The returned
+        :class:`MeasurementList` includes ``total`` (full count before
+        pagination) so callers can compute page counts.
+        """
+        filtered = self._filter_measurements(signal_ids, from_date, to_date)
+        page = filtered[offset : offset + limit]
+        return MeasurementList(
+            total=len(filtered),
+            count=len(page),
+            limit=limit,
+            offset=offset,
+            measurements=page,
+        )
 
     def calculate_signal_stats(
         self,

@@ -81,11 +81,22 @@ uv run pytest -v
 
 or in container with
 ```
-docker build --target test -t asset-api:test .
-docker run --rm asset-api:test
+docker compose run --build unit-tests
 ```
 
-- delete unused/obsolete code (utils, utilities, helpers)
-- move data files to a dedicated directory (e.g., `data/`)
-- seperate concerns between data, business, and actual application logic
-- changing asset and signal ids to be ints instead of strings, which is more common and easier to work with
+- Delete unused/obsolete code (utils, utilities, helpers)
+- Move data files to a dedicated directory (e.g., `data/`)
+- Seperate concerns between data, business, and actual application logic
+- Change asset and signal ids to be ints instead of strings, which is more common and easier to work with
+
+## Error Handling, Logging, integ tests, and Cleanup (30min)
+- Add error handling for all endpoints, including validation errors, not found errors, and internal server errors.
+- Add logging
+- Do overall cleanup
+- Add docker compose file to run the application and tests in a containerized environment
+- Add integration tests for all endpoints, including edge cases and error cases. Use newman for this, which is a modern and easy-to-use tool for testing APIs.
+
+Run the integration tests in docker with
+```
+docker compose run --build integration-tests
+```

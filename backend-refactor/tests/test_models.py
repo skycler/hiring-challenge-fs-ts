@@ -714,29 +714,39 @@ SAMPLE_MEASUREMENTS = [
 class TestMeasurementListConstruction:
     def test_construct_with_measurements(self):
         items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
-        ml = MeasurementList(count=3, measurements=items)
+        ml = MeasurementList(total=3, count=3, limit=1000, offset=0, measurements=items)
         assert ml.count == 3
         assert len(ml.measurements) == 3
 
     def test_construct_empty(self):
-        ml = MeasurementList(count=0, measurements=[])
+        ml = MeasurementList(total=0, count=0, limit=1000, offset=0, measurements=[])
         assert ml.count == 0
         assert ml.measurements == []
 
     def test_model_validate(self):
         data = {
+            "total": 2,
             "count": 2,
+            "limit": 1000,
+            "offset": 0,
             "measurements": SAMPLE_MEASUREMENTS[:2],
         }
         ml = MeasurementList.model_validate(data)
         assert ml.count == 2
         assert ml.measurements[0].value == pytest.approx(230.5)
 
+    def test_pagination_fields(self):
+        items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
+        ml = MeasurementList(total=50, count=3, limit=10, offset=20, measurements=items)
+        assert ml.total == 50
+        assert ml.limit == 10
+        assert ml.offset == 20
+
 
 class TestMeasurementListSerialization:
     def test_dump_contains_nested_measurements(self):
         items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
-        ml = MeasurementList(count=3, measurements=items)
+        ml = MeasurementList(total=3, count=3, limit=1000, offset=0, measurements=items)
         d = ml.model_dump()
         assert d["count"] == 3
         assert len(d["measurements"]) == 3
@@ -744,24 +754,47 @@ class TestMeasurementListSerialization:
 
     def test_json_round_trip(self):
         items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
-        ml = MeasurementList(count=3, measurements=items)
+        ml = MeasurementList(total=3, count=3, limit=1000, offset=0, measurements=items)
         json_str = ml.model_dump_json()
         ml2 = MeasurementList.model_validate_json(json_str)
         assert ml == ml2
+
+    def test_dump_contains_pagination_fields(self):
+        items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
+        ml = MeasurementList(total=100, count=3, limit=10, offset=5, measurements=items)
+        d = ml.model_dump()
+        assert d["total"] == 100
+        assert d["limit"] == 10
+        assert d["offset"] == 5
 
 
 class TestMeasurementListValidation:
     def test_missing_count_raises(self):
         with pytest.raises(ValidationError):
-            MeasurementList(measurements=[])
+            MeasurementList(total=0, limit=1000, offset=0, measurements=[])
 
     def test_missing_measurements_raises(self):
         with pytest.raises(ValidationError):
-            MeasurementList(count=0)
+            MeasurementList(total=0, count=0, limit=1000, offset=0)
 
     def test_invalid_measurement_in_list_raises(self):
         with pytest.raises(ValidationError):
             MeasurementList(
+                total=1,
                 count=1,
+                limit=1000,
+                offset=0,
                 measurements=[{"bad": "data"}],
             )
+
+    def test_missing_total_raises(self):
+        with pytest.raises(ValidationError):
+            MeasurementList(count=0, limit=1000, offset=0, measurements=[])
+
+    def test_missing_limit_raises(self):
+        with pytest.raises(ValidationError):
+            MeasurementList(total=0, count=0, offset=0, measurements=[])
+
+    def test_missing_offset_raises(self):
+        with pytest.raises(ValidationError):
+            MeasurementList(total=0, count=0, limit=1000, measurements=[])

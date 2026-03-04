@@ -22,7 +22,7 @@ class Measurement(BaseModel):
 
 
 class MeasurementList(BaseModel):
-    """A list of measurements for one or more signals.
+    """A paginated list of measurements for one or more signals.
 
     Used as the response model for endpoints that return measurement
     time-series data.  Each :class:`Measurement` already carries its own
@@ -30,7 +30,18 @@ class MeasurementList(BaseModel):
     identifier — this lets the same model serve both single-signal
     (``GET /signals/{id}/measurements``) and multi-signal
     (``GET /measurements?signal_ids=1,2,3``) responses.
+
+    Pagination fields:
+
+    - ``total`` — total number of measurements matching the query (before
+      pagination).
+    - ``count`` — number of measurements in this page (``len(measurements)``).
+    - ``limit`` — maximum number of measurements per page.
+    - ``offset`` — zero-based offset into the full result set.
     """
 
-    count: int = Field(examples=[50])
+    total: int = Field(description="Total matching measurements", examples=[9500])
+    count: int = Field(description="Measurements in this page", examples=[50])
+    limit: int = Field(description="Page size", examples=[1000])
+    offset: int = Field(description="Page offset", examples=[0])
     measurements: list[Measurement] = Field(examples=[[]])

@@ -10,16 +10,17 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from models.asset import Asset
 from models.signal import Signal
-from providers import get_provider
-from providers.base import DataProvider
+from services import get_asset_service, get_signal_service
+from services.asset import AssetService
+from services.signal import SignalService
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
 
 @router.get("", response_model=list[Asset], response_model_by_alias=False)
-async def get_assets(provider: DataProvider = Depends(get_provider)) -> list[Asset]:
+async def get_assets(svc: AssetService = Depends(get_asset_service)) -> list[Asset]:
     """Return all assets."""
-    return provider.load_assets()
+    return svc.get_all()
 
 
 @router.get(
@@ -30,12 +31,10 @@ async def get_assets(provider: DataProvider = Depends(get_provider)) -> list[Ass
 )
 async def get_asset_signals(
     asset_id: int,
-    provider: DataProvider = Depends(get_provider),
+    asset_svc: AssetService = Depends(get_asset_service),
+    signal_svc: SignalService = Depends(get_signal_service),
 ) -> list[Signal]:
     """Return all signals belonging to the given asset."""
-    assets = provider.load_assets()
-    if not any(a.asset_id == asset_id for a in assets):
+    if asset_svc.find_by_id(asset_id) is None:
         raise HTTPException(status_code=404, detail=f"Asset {asset_id!r} not found")
-
-    signals = provider.load_signals()
-    return [s for s in signals if s.asset_id == asset_id]
+    return [s for s in signal_svc.get_all() if s.asset_id == asset_id]

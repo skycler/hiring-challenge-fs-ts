@@ -10,21 +10,11 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.measurement import MeasurementList
-from providers import get_provider
-from providers.base import DataProvider
-from services import get_measurement_service
+from services import get_measurement_service, get_signal_service
 from services.measurement import MeasurementService
+from services.signal import SignalService
 
 router = APIRouter(prefix="/measurements", tags=["measurements"])
-
-
-def _validate_date_range(from_date: datetime | None, to_date: datetime | None) -> None:
-    """Raise 400 if both dates are given and ``from_date >= to_date``."""
-    if from_date is not None and to_date is not None and from_date >= to_date:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid date range: 'from' must be before 'to'",
-        )
 
 
 @router.get(
@@ -38,14 +28,14 @@ def _validate_date_range(from_date: datetime | None, to_date: datetime | None) -
 )
 async def get_measurements(
     signal_ids: str = Query(..., description="Comma-separated signal IDs"),
-    from_date: datetime | None = Query(
-        None, alias="from", description="Start datetime (ISO 8601)"
-    ),
-    to_date: datetime | None = Query(None, alias="to", description="End datetime (ISO 8601)"),
-    provider: DataProvider = Depends(get_provider),
-    svc: MeasurementService = Depends(get_measurement_service),
+    from_date: datetime = Query(..., alias="from", description="Start datetime (ISO 8601)"),
+    to_date: datetime = Query(..., alias="to", description="End datetime (ISO 8601)"),
+    limit: int = Query(1000, ge=1, le=10000, description="Maximum results per page"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    signal_svc: SignalService = Depends(get_signal_service),
+    measurement_svc: MeasurementService = Depends(get_measurement_service),
 ) -> MeasurementList:
-    """Return measurements for the given signal IDs, optionally filtered by date range."""
+    """Return measurements for the given signal IDs within a date range."""
     stripped = [sid.strip() for sid in signal_ids.split(",") if sid.strip()]
 
     if not stripped:
@@ -56,14 +46,18 @@ async def get_measurements(
     except ValueError:
         raise HTTPException(status_code=400, detail="All signal_ids must be integers") from None
 
-    known_ids = {s.signal_id for s in provider.load_signals()}
-    unknown = [sid for sid in id_list if sid not in known_ids]
+    unknown = signal_svc.find_unknown_ids(id_list)
     if unknown:
         raise HTTPException(
             status_code=404,
             detail=f"Signal(s) {unknown} not found",
         )
 
-    _validate_date_range(from_date, to_date)
+    try:
+        measurement_svc.validate_date_range(from_date, to_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    return svc.get_measurements(id_list, from_date, to_date)
+    return measurement_svc.get_measurements(
+        id_list, from_date, to_date, limit=limit, offset=offset
+    )

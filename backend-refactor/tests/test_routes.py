@@ -14,9 +14,10 @@ from conftest import StubProvider
 from models.asset import Asset
 from models.measurement import Measurement
 from models.signal import Signal
-from providers import get_provider
-from services import get_measurement_service
+from services import get_asset_service, get_measurement_service, get_signal_service
+from services.asset import AssetService
 from services.measurement import MeasurementService
+from services.signal import SignalService
 
 # ---------------------------------------------------------------------------
 # Inline fixtures
@@ -65,9 +66,10 @@ _stub_provider = StubProvider(
 
 @pytest.fixture()
 def client():
-    """TestClient with dependency overrides for the provider and service."""
+    """TestClient with dependency overrides for the services."""
     app = create_app()
-    app.dependency_overrides[get_provider] = lambda: _stub_provider
+    app.dependency_overrides[get_asset_service] = lambda: AssetService(_stub_provider)
+    app.dependency_overrides[get_signal_service] = lambda: SignalService(_stub_provider)
     app.dependency_overrides[get_measurement_service] = lambda: MeasurementService(_stub_provider)
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -183,22 +185,60 @@ class TestGetSignalStats:
 
 class TestGetSignalMeasurements:
     def test_success(self, client):
-        r = client.get("/signals/100/measurements")
+        r = client.get("/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 200
         data = r.json()
         assert data["count"] == 2
+        assert data["total"] == 2
+        assert data["limit"] == 1000
+        assert data["offset"] == 0
 
     def test_unknown_signal_404(self, client):
-        r = client.get("/signals/999/measurements")
+        r = client.get("/signals/999/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 404
 
     def test_bad_date_range_400(self, client):
         r = client.get("/signals/100/measurements?from=2021-12-31T00:00:00&to=2021-01-01T00:00:00")
         assert r.status_code == 400
 
-    def test_optional_date_params(self, client):
-        r = client.get("/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
+    def test_missing_from_422(self, client):
+        r = client.get("/signals/100/measurements?to=2021-12-31T00:00:00")
+        assert r.status_code == 422
+
+    def test_missing_to_422(self, client):
+        r = client.get("/signals/100/measurements?from=2021-01-01T00:00:00")
+        assert r.status_code == 422
+
+    def test_missing_both_dates_422(self, client):
+        r = client.get("/signals/100/measurements")
+        assert r.status_code == 422
+
+    def test_pagination_params(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=1&offset=0"
+        )
         assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 2
+        assert data["count"] == 1
+        assert data["limit"] == 1
+        assert data["offset"] == 0
+
+    def test_limit_validation(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=0"
+        )
+        assert r.status_code == 422
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=10001"
+        )
+        assert r.status_code == 422
+
+    def test_offset_validation(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&offset=-1"
+        )
+        assert r.status_code == 422
 
 
 # ---------------------------------------------------------------------------
@@ -208,13 +248,18 @@ class TestGetSignalMeasurements:
 
 class TestGetMeasurements:
     def test_success(self, client):
-        r = client.get("/measurements?signal_ids=100,200")
+        r = client.get(
+            "/measurements?signal_ids=100,200&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"
+        )
         assert r.status_code == 200
         data = r.json()
         assert data["count"] == 2
+        assert data["total"] == 2
+        assert data["limit"] == 1000
+        assert data["offset"] == 0
 
     def test_missing_signal_ids_422(self, client):
-        r = client.get("/measurements")
+        r = client.get("/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 422
 
     def test_bad_date_range_400(self, client):
@@ -223,21 +268,66 @@ class TestGetMeasurements:
         )
         assert r.status_code == 400
 
+    def test_missing_from_422(self, client):
+        r = client.get("/measurements?signal_ids=100&to=2021-12-31T00:00:00")
+        assert r.status_code == 422
+
+    def test_missing_to_422(self, client):
+        r = client.get("/measurements?signal_ids=100&from=2021-01-01T00:00:00")
+        assert r.status_code == 422
+
+    def test_missing_both_dates_422(self, client):
+        r = client.get("/measurements?signal_ids=100")
+        assert r.status_code == 422
+
     def test_empty_signal_ids_400(self, client):
-        r = client.get("/measurements?signal_ids=")
+        r = client.get("/measurements?signal_ids=&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 400
 
     def test_non_integer_signal_ids_400(self, client):
-        r = client.get("/measurements?signal_ids=abc")
+        r = client.get(
+            "/measurements?signal_ids=abc&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"
+        )
         assert r.status_code == 400
         assert "integers" in r.json()["detail"]
 
     def test_unknown_signal_ids_404(self, client):
-        r = client.get("/measurements?signal_ids=999")
+        r = client.get(
+            "/measurements?signal_ids=999&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"
+        )
         assert r.status_code == 404
         assert "999" in r.json()["detail"]
 
     def test_mix_known_and_unknown_signal_ids_404(self, client):
-        r = client.get("/measurements?signal_ids=100,999")
+        r = client.get(
+            "/measurements?signal_ids=100,999&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"
+        )
         assert r.status_code == 404
         assert "999" in r.json()["detail"]
+
+    def test_pagination_params(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=1&offset=1"
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 2
+        assert data["count"] == 1
+        assert data["limit"] == 1
+        assert data["offset"] == 1
+
+    def test_limit_validation(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=0"
+        )
+        assert r.status_code == 422
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&limit=10001"
+        )
+        assert r.status_code == 422
+
+    def test_offset_validation(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&offset=-1"
+        )
+        assert r.status_code == 422
