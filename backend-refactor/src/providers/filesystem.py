@@ -15,7 +15,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from models.asset import Asset
-from models.measurement import Measurement
+from models.measurement import MeasurementTuple
 from models.signal import Signal
 from providers.base import DataProvider
 from settings import Settings
@@ -41,7 +41,7 @@ class FileSystemProvider(DataProvider):
         self._settings = settings or Settings.get()
         self._signals_cache: list[Signal] | None = None
         self._assets_cache: list[Asset] | None = None
-        self._measurements_cache: list[Measurement] | None = None
+        self._measurements_cache: list[MeasurementTuple] | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -93,20 +93,21 @@ class FileSystemProvider(DataProvider):
             )
         return self._assets_cache
 
-    def load_measurements(self) -> list[Measurement]:
+    def load_measurements(self) -> list[MeasurementTuple]:
         """Load all measurements from ``measurements.csv``, caching on first read.
 
         The CSV is pipe-delimited with European comma decimals
-        (e.g. ``116,129`` -> ``116.129``).
+        (e.g. ``116,129`` -> ``116.129``).  Data is stored as lightweight
+        :class:`MeasurementTuple` instances to minimise memory usage.
         """
         if self._measurements_cache is None:
-            measurements: list[Measurement] = []
+            measurements: list[MeasurementTuple] = []
             try:
                 with open(self._settings.measurements_path, encoding="utf-8-sig") as f:
                     reader = csv.DictReader(f, delimiter="|")
                     for row in reader:
                         measurements.append(
-                            Measurement(
+                            MeasurementTuple(
                                 timestamp=datetime.fromisoformat(row["Ts"]),
                                 signal_id=int(row["SignalId"]),
                                 value=float(row["MeasurementValue"].replace(",", ".")),

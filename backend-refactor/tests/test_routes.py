@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app import create_app
 from conftest import StubProvider
 from models.asset import Asset
-from models.measurement import Measurement
+from models.measurement import MeasurementTuple
 from models.signal import Signal
 from services import get_asset_service, get_measurement_service, get_signal_service
 from services.asset import AssetService
@@ -53,8 +53,8 @@ _SIGNALS = [
 ]
 
 _MEASUREMENTS = [
-    Measurement(timestamp=datetime(2021, 11, 7, 10, 0), signal_id=100, value=100.0),
-    Measurement(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=200.0),
+    MeasurementTuple(timestamp=datetime(2021, 11, 7, 10, 0), signal_id=100, value=100.0),
+    MeasurementTuple(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=200.0),
 ]
 
 _stub_provider = StubProvider(
@@ -65,14 +65,29 @@ _stub_provider = StubProvider(
 
 
 @pytest.fixture()
-def client():
-    """TestClient with dependency overrides for the services."""
+def client(monkeypatch):
+    """TestClient with dependency overrides for the services.
+
+    The lifespan warmup calls the ``get_*_service()`` factories directly
+    (outside FastAPI DI), so we monkeypatch the underlying provider to
+    use stub data and clear the lru_caches first.  The context manager
+    form ensures lifespan startup/shutdown events fire.
+    """
+    monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+    get_asset_service.cache_clear()
+    get_signal_service.cache_clear()
+    get_measurement_service.cache_clear()
+
     app = create_app()
     app.dependency_overrides[get_asset_service] = lambda: AssetService(_stub_provider)
     app.dependency_overrides[get_signal_service] = lambda: SignalService(_stub_provider)
     app.dependency_overrides[get_measurement_service] = lambda: MeasurementService(_stub_provider)
-    yield TestClient(app)
+    with TestClient(app) as c:
+        yield c
     app.dependency_overrides.clear()
+    get_asset_service.cache_clear()
+    get_signal_service.cache_clear()
+    get_measurement_service.cache_clear()
 
 
 # ---------------------------------------------------------------------------

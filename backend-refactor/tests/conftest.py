@@ -5,7 +5,7 @@ Provides :class:`StubProvider`, an in-memory implementation of
 """
 
 from models.asset import Asset
-from models.measurement import Measurement
+from models.measurement import MeasurementTuple
 from models.signal import Signal
 from providers.base import DataProvider
 
@@ -19,7 +19,7 @@ class StubProvider(DataProvider):
     Args:
         signals: Pre-built signal objects to return from :meth:`load_signals`.
         assets: Pre-built asset objects to return from :meth:`load_assets`.
-        measurements: Pre-built measurement objects to return from
+        measurements: Pre-built measurement tuples to return from
             :meth:`load_measurements`.
     """
 
@@ -27,7 +27,7 @@ class StubProvider(DataProvider):
         self,
         signals: list[Signal] | None = None,
         assets: list[Asset] | None = None,
-        measurements: list[Measurement] | None = None,
+        measurements: list[MeasurementTuple] | None = None,
     ) -> None:
         self._signals = signals or []
         self._assets = assets or []
@@ -41,6 +41,6 @@ class StubProvider(DataProvider):
         """Return the pre-configured asset list."""
         return self._assets
 
-    def load_measurements(self) -> list[Measurement]:
-        """Return the pre-configured measurement list."""
+    def load_measurements(self) -> list[MeasurementTuple]:
+        """Return the pre-configured measurement tuple list."""
         return self._measurements

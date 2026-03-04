@@ -100,3 +100,11 @@ Run the integration tests in docker with
 ```
 docker compose run --build integration-tests
 ```
+
+## Performance and Security (20min)
+- New output format query parameter for measurements endpoint to return a flat list of data points instead of a nested structure. This is more efficient and easier to work with for clients.
+- Add pagination to the measurements endpoint to avoid returning too much data at once, which can cause performance issues and make it harder for clients to work with the data.
+- Improve search logic to get rid of O(n) complexity and use a more efficient data structure (e.g., a dictionary) to store the data in memory, which will significantly improve the performance of the endpoints.
+- No Pydantic model for chached measurements, simple named tuple instead, which is more efficient and easier to work with for this use case.
+- Add warmup logic to the application to pre-load the data into memory when the application starts, which will improve the performance of the endpoints and reduce the response time for clients.
+- 

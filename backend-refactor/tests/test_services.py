@@ -9,7 +9,12 @@ from datetime import datetime
 import pytest
 from conftest import StubProvider
 from models.asset import Asset
-from models.measurement import FlatMeasurementList, Measurement, MeasurementList, ResponseFormat
+from models.measurement import (
+    FlatMeasurementList,
+    MeasurementList,
+    MeasurementTuple,
+    ResponseFormat,
+)
 from models.signal import Signal, SignalStats
 from services import get_asset_service, get_measurement_service, get_signal_service
 from services.asset import AssetService
@@ -32,10 +37,10 @@ _SIGNALS = [
 ]
 
 _MEASUREMENTS = [
-    Measurement(timestamp=datetime(2021, 11, 7, 10, 0), signal_id=100, value=100.0),
-    Measurement(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=200.0),
-    Measurement(timestamp=datetime(2021, 11, 7, 12, 0), signal_id=100, value=300.0),
-    Measurement(timestamp=datetime(2021, 11, 8, 10, 0), signal_id=200, value=230.5),
+    MeasurementTuple(timestamp=datetime(2021, 11, 7, 10, 0), signal_id=100, value=100.0),
+    MeasurementTuple(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=200.0),
+    MeasurementTuple(timestamp=datetime(2021, 11, 7, 12, 0), signal_id=100, value=300.0),
+    MeasurementTuple(timestamp=datetime(2021, 11, 8, 10, 0), signal_id=200, value=230.5),
 ]
 
 _stub_provider = StubProvider(
@@ -46,7 +51,7 @@ _stub_provider = StubProvider(
 
 
 def _make_measurement_svc(
-    measurements: list[Measurement] | None = None,
+    measurements: list[MeasurementTuple] | None = None,
 ) -> MeasurementService:
     return MeasurementService(StubProvider(measurements=measurements or _MEASUREMENTS))
 
@@ -86,6 +91,16 @@ class TestAssetServiceFindById:
     def test_not_found(self):
         svc = AssetService(_stub_provider)
         assert svc.find_by_id(999) is None
+
+    def test_index_reused_across_calls(self):
+        """Second find_by_id reuses the cached index (early-return path)."""
+        svc = AssetService(_stub_provider)
+        svc.find_by_id(1)
+        assert svc._by_id is not None
+        # Second call hits the early-return in _ensure_index
+        asset = svc.find_by_id(2)
+        assert asset is not None
+        assert asset.asset_id == 2
 
 
 # ===========================================================================
@@ -145,6 +160,16 @@ class TestSignalServiceFindById:
     def test_not_found(self):
         svc = SignalService(_stub_provider)
         assert svc.find_by_id(999) is None
+
+    def test_index_reused_across_calls(self):
+        """Second find_by_id reuses the cached indexes (early-return path)."""
+        svc = SignalService(_stub_provider)
+        svc.find_by_id(100)
+        assert svc._by_id is not None
+        # Second call hits the early-return in _ensure_indexes
+        signal = svc.find_by_id(200)
+        assert signal is not None
+        assert signal.signal_id == 200
 
 
 class TestSignalServiceFindUnknownIds:
@@ -450,6 +475,18 @@ class TestCalculateSignalStats:
         result = svc.calculate_signal_stats(100, datetime(2021, 1, 1), datetime(2021, 12, 31))
         assert result.std_dev == 0.0
 
+    def test_min_not_first_element(self):
+        """Covers the ``min_val = v`` branch when min appears after the first row."""
+        measurements = [
+            MeasurementTuple(timestamp=datetime(2021, 11, 7, 10, 0), signal_id=100, value=300.0),
+            MeasurementTuple(timestamp=datetime(2021, 11, 7, 11, 0), signal_id=100, value=50.0),
+            MeasurementTuple(timestamp=datetime(2021, 11, 7, 12, 0), signal_id=100, value=200.0),
+        ]
+        svc = _make_measurement_svc(measurements)
+        result = svc.calculate_signal_stats(100, datetime(2021, 1, 1), datetime(2021, 12, 31))
+        assert result.min == 50.0
+        assert result.max == 300.0
+
     def test_dates_in_result(self):
         svc = _make_measurement_svc()
         from_dt = datetime(2021, 1, 1)
@@ -496,35 +533,47 @@ class TestServiceIndexCaching:
 class TestGetAssetServiceFactory:
     """get_asset_service dependency factory returns an AssetService."""
 
-    def test_returns_asset_service(self):
-        svc = get_asset_service(_stub_provider)
+    def test_returns_asset_service(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_asset_service.cache_clear()
+        svc = get_asset_service()
         assert isinstance(svc, AssetService)
 
-    def test_service_uses_provided_provider(self):
-        svc = get_asset_service(_stub_provider)
+    def test_service_uses_provided_provider(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_asset_service.cache_clear()
+        svc = get_asset_service()
         assert len(svc.get_all()) == 2
 
 
 class TestGetSignalServiceFactory:
     """get_signal_service dependency factory returns a SignalService."""
 
-    def test_returns_signal_service(self):
-        svc = get_signal_service(_stub_provider)
+    def test_returns_signal_service(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_signal_service.cache_clear()
+        svc = get_signal_service()
         assert isinstance(svc, SignalService)
 
-    def test_service_uses_provided_provider(self):
-        svc = get_signal_service(_stub_provider)
+    def test_service_uses_provided_provider(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_signal_service.cache_clear()
+        svc = get_signal_service()
         assert len(svc.get_all()) == 3
 
 
 class TestGetMeasurementServiceFactory:
     """get_measurement_service dependency factory returns a MeasurementService."""
 
-    def test_returns_measurement_service(self):
-        svc = get_measurement_service(_stub_provider)
+    def test_returns_measurement_service(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_measurement_service.cache_clear()
+        svc = get_measurement_service()
         assert isinstance(svc, MeasurementService)
 
-    def test_service_uses_provided_provider(self):
-        svc = get_measurement_service(_stub_provider)
+    def test_service_uses_provided_provider(self, monkeypatch):
+        monkeypatch.setattr("services.get_provider", lambda: _stub_provider)
+        get_measurement_service.cache_clear()
+        svc = get_measurement_service()
         result = svc.get_measurements([100])
         assert result.count == 3

@@ -1,6 +1,10 @@
 """Measurement models.
 
-Defines the core :class:`Measurement` model and two response-list variants:
+Defines the core :class:`Measurement` Pydantic model (used at the API
+boundary) and a lightweight :class:`MeasurementTuple` (used internally
+by providers and services to minimise memory overhead for ~189K rows).
+
+Two response-list variants are provided:
 
 - :class:`MeasurementList` — traditional array-of-objects format
   (``format=objects``, the default).
@@ -16,8 +20,23 @@ a ``format`` query parameter.
 
 from datetime import datetime
 from enum import Enum
+from typing import NamedTuple
 
 from pydantic import BaseModel, Field
+
+
+class MeasurementTuple(NamedTuple):
+    """Lightweight, memory-efficient measurement record for internal use.
+
+    A :class:`~typing.NamedTuple` uses ~3x less memory than a Pydantic
+    :class:`BaseModel` instance.  Providers store data in this form;
+    conversion to the Pydantic :class:`Measurement` model happens only
+    at the response boundary.
+    """
+
+    timestamp: datetime
+    signal_id: int
+    value: float
 
 
 class ResponseFormat(str, Enum):

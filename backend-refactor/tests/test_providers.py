@@ -14,7 +14,7 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from models.asset import Asset
-from models.measurement import Measurement
+from models.measurement import MeasurementTuple
 from models.signal import Signal
 from providers import get_provider
 from providers.base import DataProvider
@@ -265,7 +265,7 @@ class TestFileSystemProviderMeasurements:
         with patch("providers.filesystem.open", m):
             result = provider.load_measurements()
         assert len(result) == 3
-        assert all(isinstance(r, Measurement) for r in result)
+        assert all(isinstance(r, MeasurementTuple) for r in result)
 
     def test_european_comma_parsed(self):
         m = mock_open(read_data=MEASUREMENT_CSV)
