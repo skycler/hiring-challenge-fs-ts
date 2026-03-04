@@ -58,16 +58,19 @@ class MeasurementService:
         """
         index = self._get_index()
 
-        result: list[Measurement] = []
+        candidates: list[Measurement] = []
         for sid in signal_ids:
-            result.extend(index.get(sid, []))
+            candidates.extend(index.get(sid, []))
 
-        if from_date is not None:
-            result = [m for m in result if m.timestamp >= from_date]
-        if to_date is not None:
-            result = [m for m in result if m.timestamp <= to_date]
+        if from_date is None and to_date is None:
+            return candidates
 
-        return result
+        return [
+            m
+            for m in candidates
+            if (from_date is None or m.timestamp >= from_date)
+            and (to_date is None or m.timestamp <= to_date)
+        ]
 
     # ------------------------------------------------------------------
     # Validation

@@ -81,6 +81,8 @@ def client():
 
 
 class TestHealth:
+    """GET /health returns 200 with status ok."""
+
     def test_health(self, client):
         r = client.get("/health")
         assert r.status_code == 200
@@ -93,6 +95,8 @@ class TestHealth:
 
 
 class TestGetAssets:
+    """GET /assets returns all assets with correct fields."""
+
     def test_status(self, client):
         r = client.get("/assets")
         assert r.status_code == 200
@@ -113,6 +117,8 @@ class TestGetAssets:
 
 
 class TestGetAssetSignals:
+    """GET /assets/{id}/signals returns signals for a given asset, or 404."""
+
     def test_signals_for_asset_1(self, client):
         r = client.get("/assets/1/signals")
         assert r.status_code == 200
@@ -138,6 +144,8 @@ class TestGetAssetSignals:
 
 
 class TestGetSignals:
+    """GET /signals returns all signals."""
+
     def test_status(self, client):
         r = client.get("/signals")
         assert r.status_code == 200
@@ -148,6 +156,8 @@ class TestGetSignals:
 
 
 class TestGetSignal:
+    """GET /signals/{id} returns a single signal or 404."""
+
     def test_found(self, client):
         r = client.get("/signals/100")
         assert r.status_code == 200
@@ -159,6 +169,8 @@ class TestGetSignal:
 
 
 class TestGetSignalStats:
+    """GET /signals/{id}/stats with required date params, or 400/404/422."""
+
     def test_success(self, client):
         r = client.get("/signals/100/stats?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 200
@@ -184,6 +196,8 @@ class TestGetSignalStats:
 
 
 class TestGetSignalMeasurements:
+    """GET /signals/{id}/measurements with required dates and pagination."""
+
     def test_success(self, client):
         r = client.get("/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
         assert r.status_code == 200
@@ -247,6 +261,8 @@ class TestGetSignalMeasurements:
 
 
 class TestGetMeasurements:
+    """GET /measurements with signal_ids, required dates, and pagination."""
+
     def test_success(self, client):
         r = client.get(
             "/measurements?signal_ids=100,200&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"

@@ -1,4 +1,8 @@
-"""Routes package."""
+"""Routes package -- thin HTTP adapters over the service layer.
+
+Re-exports individual routers for convenient registration in
+:func:`app.create_app`.
+"""
 
 from routes.assets import router as assets_router
 from routes.health import router as health_router

@@ -20,4 +20,9 @@ class Settings(BaseSettings):
     @staticmethod
     @lru_cache
     def get() -> "Settings":
+        """Return the application-wide settings singleton.
+
+        Backed by :func:`functools.lru_cache` so the instance is created
+        only once.  Call ``Settings.get.cache_clear()`` in tests to reset.
+        """
         return Settings()

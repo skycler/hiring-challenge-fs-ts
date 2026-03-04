@@ -61,6 +61,8 @@ def _make_empty_measurement_svc() -> MeasurementService:
 
 
 class TestAssetServiceGetAll:
+    """AssetService.get_all returns every asset from the provider."""
+
     def test_returns_all_assets(self):
         svc = AssetService(_stub_provider)
         result = svc.get_all()
@@ -73,6 +75,8 @@ class TestAssetServiceGetAll:
 
 
 class TestAssetServiceFindById:
+    """AssetService.find_by_id returns matching asset or None."""
+
     def test_found(self):
         svc = AssetService(_stub_provider)
         asset = svc.find_by_id(1)
@@ -89,7 +93,35 @@ class TestAssetServiceFindById:
 # ===========================================================================
 
 
+class TestSignalServiceFindByAssetId:
+    """SignalService.find_by_asset_id returns signals for a given asset."""
+
+    def test_returns_matching_signals(self):
+        svc = SignalService(_stub_provider)
+        result = svc.find_by_asset_id(1)
+        assert len(result) == 2
+        assert all(s.asset_id == 1 for s in result)
+
+    def test_single_match(self):
+        svc = SignalService(_stub_provider)
+        result = svc.find_by_asset_id(2)
+        assert len(result) == 1
+        assert result[0].signal_id == 300
+
+    def test_no_match(self):
+        svc = SignalService(_stub_provider)
+        result = svc.find_by_asset_id(999)
+        assert result == []
+
+    def test_empty_provider(self):
+        svc = SignalService(StubProvider())
+        result = svc.find_by_asset_id(1)
+        assert result == []
+
+
 class TestSignalServiceGetAll:
+    """SignalService.get_all returns every signal from the provider."""
+
     def test_returns_all_signals(self):
         svc = SignalService(_stub_provider)
         result = svc.get_all()
@@ -102,6 +134,8 @@ class TestSignalServiceGetAll:
 
 
 class TestSignalServiceFindById:
+    """SignalService.find_by_id returns matching signal or None."""
+
     def test_found(self):
         svc = SignalService(_stub_provider)
         signal = svc.find_by_id(100)
@@ -114,6 +148,8 @@ class TestSignalServiceFindById:
 
 
 class TestSignalServiceFindUnknownIds:
+    """SignalService.find_unknown_ids returns IDs not present in the dataset."""
+
     def test_all_known(self):
         svc = SignalService(_stub_provider)
         assert svc.find_unknown_ids([100, 200]) == []
@@ -137,6 +173,8 @@ class TestSignalServiceFindUnknownIds:
 
 
 class TestValidateDateRange:
+    """MeasurementService.validate_date_range raises ValueError when from >= to."""
+
     def test_valid_range(self):
         # Should not raise
         MeasurementService.validate_date_range(datetime(2021, 1, 1), datetime(2021, 12, 31))
@@ -156,6 +194,8 @@ class TestValidateDateRange:
 
 
 class TestFilterBySignalId:
+    """get_measurements filters results to the requested signal_ids."""
+
     def test_single_signal(self):
         svc = _make_measurement_svc()
         result = svc.get_measurements([100])
@@ -175,6 +215,8 @@ class TestFilterBySignalId:
 
 
 class TestFilterByDateRange:
+    """get_measurements applies from_date/to_date filters correctly."""
+
     def test_from_and_to(self):
         svc = _make_measurement_svc()
         result = svc.get_measurements(
@@ -215,6 +257,8 @@ class TestFilterByDateRange:
 
 
 class TestGetMeasurements:
+    """get_measurements returns a paginated MeasurementList with total/count."""
+
     def test_returns_measurement_list(self):
         svc = _make_measurement_svc()
         result = svc.get_measurements([100])
@@ -282,6 +326,8 @@ class TestGetMeasurements:
 
 
 class TestCalculateSignalStats:
+    """calculate_signal_stats computes count/mean/min/max/median/std_dev."""
+
     def test_returns_signal_stats(self):
         svc = _make_measurement_svc()
         result = svc.calculate_signal_stats(100, datetime(2021, 1, 1), datetime(2021, 12, 31))
@@ -348,6 +394,8 @@ class TestCalculateSignalStats:
 
 
 class TestServiceIndexCaching:
+    """MeasurementService builds a signal_id index lazily and reuses it."""
+
     def test_index_is_built_lazily(self):
         """The index is None until the first query."""
         svc = _make_measurement_svc()
@@ -370,6 +418,8 @@ class TestServiceIndexCaching:
 
 
 class TestGetAssetServiceFactory:
+    """get_asset_service dependency factory returns an AssetService."""
+
     def test_returns_asset_service(self):
         svc = get_asset_service(_stub_provider)
         assert isinstance(svc, AssetService)
@@ -380,6 +430,8 @@ class TestGetAssetServiceFactory:
 
 
 class TestGetSignalServiceFactory:
+    """get_signal_service dependency factory returns a SignalService."""
+
     def test_returns_signal_service(self):
         svc = get_signal_service(_stub_provider)
         assert isinstance(svc, SignalService)
@@ -390,6 +442,8 @@ class TestGetSignalServiceFactory:
 
 
 class TestGetMeasurementServiceFactory:
+    """get_measurement_service dependency factory returns a MeasurementService."""
+
     def test_returns_measurement_service(self):
         svc = get_measurement_service(_stub_provider)
         assert isinstance(svc, MeasurementService)

@@ -1,4 +1,9 @@
-"""Providers package — data access abstraction."""
+"""Providers package -- data access abstraction.
+
+Re-exports the :class:`DataProvider` interface and the
+:class:`FileSystemProvider` implementation, plus a lazily-initialised
+singleton via :func:`get_provider`.
+"""
 
 from providers.base import DataProvider
 from providers.filesystem import FileSystemProvider

@@ -2,7 +2,7 @@
 
 Endpoints
 ---------
-- ``GET /measurements?signal_ids=1,2,3`` — measurements for multiple signals
+- ``GET /measurements?signal_ids=1,2,3`` -- measurements for multiple signals
 """
 
 from datetime import datetime
@@ -35,7 +35,16 @@ async def get_measurements(
     signal_svc: SignalService = Depends(get_signal_service),
     measurement_svc: MeasurementService = Depends(get_measurement_service),
 ) -> MeasurementList:
-    """Return measurements for the given signal IDs within a date range."""
+    """Return paginated measurements for one or more signals within a date range.
+
+    The ``signal_ids`` query parameter accepts a comma-separated string of
+    integer signal IDs (e.g. ``100,200,300``).
+
+    Raises:
+        HTTPException 400: If *signal_ids* is empty, contains non-integers,
+            or the date range is invalid (``from >= to``).
+        HTTPException 404: If any of the requested signal IDs are unknown.
+    """
     stripped = [sid.strip() for sid in signal_ids.split(",") if sid.strip()]
 
     if not stripped:

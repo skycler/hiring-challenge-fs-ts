@@ -25,6 +25,10 @@ class SignalService:
                 return s
         return None
 
+    def find_by_asset_id(self, asset_id: int) -> list[Signal]:
+        """Return all signals belonging to the given asset."""
+        return [s for s in self._provider.load_signals() if s.asset_id == asset_id]
+
     def find_unknown_ids(self, signal_ids: list[int]) -> list[int]:
         """Return any IDs from *signal_ids* that don't match a known signal."""
         known = {s.signal_id for s in self._provider.load_signals()}

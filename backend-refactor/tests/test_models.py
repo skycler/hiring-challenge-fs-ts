@@ -56,6 +56,8 @@ def single_asset_record() -> dict:
 
 
 class TestAssetFromAliasKeys:
+    """Construct Asset from PascalCase (alias) keys as found in the source JSON."""
+
     def test_construct_from_alias_keys(self, single_asset_record):
         a = Asset(**single_asset_record)
         assert a.asset_id == 1
@@ -85,6 +87,8 @@ class TestAssetFromAliasKeys:
 
 
 class TestAssetFromSnakeCaseKeys:
+    """Construct Asset from snake_case keys (``populate_by_name=True``)."""
+
     def test_construct_from_snake_case(self):
         a = Asset(
             asset_id=99,
@@ -113,6 +117,8 @@ class TestAssetFromSnakeCaseKeys:
 
 
 class TestAssetSerialization:
+    """Verify Asset serialization via model_dump and JSON round-trips."""
+
     def test_dump_uses_snake_case_by_default(self, single_asset_record):
         a = Asset(**single_asset_record)
         d = a.model_dump()
@@ -148,6 +154,8 @@ class TestAssetSerialization:
 
 
 class TestAssetValidation:
+    """Ensure missing or invalid fields raise ``ValidationError``."""
+
     def test_missing_field_raises(self, single_asset_record):
         bad = deepcopy(single_asset_record)
         del bad["AssetID"]
@@ -178,6 +186,8 @@ class TestAssetValidation:
 
 
 class TestAssetEquality:
+    """Pydantic model equality based on field values."""
+
     def test_equal_instances(self, single_asset_record):
         a = Asset(**single_asset_record)
         b = Asset(**single_asset_record)
@@ -245,6 +255,8 @@ def single_signal_record() -> dict:
 
 
 class TestSignalFromAliasKeys:
+    """Construct Signal from PascalCase (alias) keys."""
+
     def test_construct_from_alias_keys(self, single_signal_record):
         s = Signal(**single_signal_record)
         assert s.signal_g_id == single_signal_record["SignalGId"]
@@ -269,6 +281,8 @@ class TestSignalFromAliasKeys:
 
 
 class TestSignalFromSnakeCaseKeys:
+    """Construct Signal from snake_case keys (``populate_by_name=True``)."""
+
     def test_construct_from_snake_case(self):
         s = Signal(
             signal_g_id="abc",
@@ -299,6 +313,8 @@ class TestSignalFromSnakeCaseKeys:
 
 
 class TestSignalSerialization:
+    """Verify Signal serialization via model_dump and JSON round-trips."""
+
     def test_dict_uses_snake_case_by_default(self, single_signal_record):
         s = Signal(**single_signal_record)
         d = s.model_dump()
@@ -330,6 +346,8 @@ class TestSignalSerialization:
 
 
 class TestSignalValidation:
+    """Ensure missing or invalid fields raise ``ValidationError``."""
+
     def test_missing_field_raises(self, single_signal_record):
         bad = deepcopy(single_signal_record)
         del bad["SignalId"]
@@ -355,6 +373,8 @@ class TestSignalValidation:
 
 
 class TestSignalEquality:
+    """Pydantic model equality based on field values."""
+
     def test_equal_instances(self, single_signal_record):
         a = Signal(**single_signal_record)
         b = Signal(**single_signal_record)
@@ -396,6 +416,8 @@ STATS_EMPTY = {
 
 
 class TestSignalStatsConstruction:
+    """Construct SignalStats with data and without (empty range)."""
+
     def test_construct_with_data(self):
         s = SignalStats(**STATS_WITH_DATA)
         assert s.signal_id == 100001
@@ -441,6 +463,8 @@ class TestSignalStatsConstruction:
 
 
 class TestSignalStatsSerialization:
+    """Verify SignalStats dump and JSON round-trip behaviour."""
+
     def test_dump(self):
         s = SignalStats(**STATS_WITH_DATA)
         d = s.model_dump()
@@ -468,6 +492,8 @@ class TestSignalStatsSerialization:
 
 
 class TestSignalStatsValidation:
+    """Ensure missing or invalid fields raise ``ValidationError``."""
+
     def test_missing_signal_id_raises(self):
         bad = deepcopy(STATS_WITH_DATA)
         del bad["signal_id"]
@@ -540,6 +566,8 @@ def snake_record() -> dict:
 
 
 class TestMeasurementFromAliasKeys:
+    """Construct Measurement from PascalCase (alias) keys."""
+
     def test_construct_from_alias_keys(self, alias_record):
         m = Measurement(**alias_record)
         assert m.signal_id == 427038
@@ -566,6 +594,8 @@ class TestMeasurementFromAliasKeys:
 
 
 class TestMeasurementFromSnakeCaseKeys:
+    """Construct Measurement from snake_case keys."""
+
     def test_construct_from_snake_case(self, snake_record):
         m = Measurement(**snake_record)
         assert m.signal_id == 427038
@@ -582,6 +612,8 @@ class TestMeasurementFromSnakeCaseKeys:
 
 
 class TestMeasurementTypeCoercion:
+    """Pydantic should coerce compatible types (str/int to float, etc.)."""
+
     def test_string_value_coerced_to_float(self, alias_record):
         alias_record["MeasurementValue"] = "99.5"
         m = Measurement(**alias_record)
@@ -613,6 +645,8 @@ class TestMeasurementTypeCoercion:
 
 
 class TestMeasurementSerialization:
+    """Verify Measurement dump and JSON round-trip behaviour."""
+
     def test_dump_uses_snake_case_by_default(self, alias_record):
         m = Measurement(**alias_record)
         d = m.model_dump()
@@ -649,6 +683,8 @@ class TestMeasurementSerialization:
 
 
 class TestMeasurementValidation:
+    """Ensure missing or invalid fields raise ``ValidationError``."""
+
     def test_missing_signal_id_raises(self, alias_record):
         del alias_record["SignalId"]
         with pytest.raises(ValidationError):
@@ -688,6 +724,8 @@ class TestMeasurementValidation:
 
 
 class TestMeasurementEquality:
+    """Pydantic model equality based on field values."""
+
     def test_equal_instances(self, alias_record):
         a = Measurement(**alias_record)
         b = Measurement(**alias_record)
@@ -712,6 +750,8 @@ SAMPLE_MEASUREMENTS = [
 
 
 class TestMeasurementListConstruction:
+    """Construct MeasurementList with items and empty."""
+
     def test_construct_with_measurements(self):
         items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
         ml = MeasurementList(total=3, count=3, limit=1000, offset=0, measurements=items)
@@ -744,6 +784,8 @@ class TestMeasurementListConstruction:
 
 
 class TestMeasurementListSerialization:
+    """Verify MeasurementList dump and JSON round-trip behaviour."""
+
     def test_dump_contains_nested_measurements(self):
         items = [Measurement(**m) for m in SAMPLE_MEASUREMENTS]
         ml = MeasurementList(total=3, count=3, limit=1000, offset=0, measurements=items)
@@ -769,6 +811,8 @@ class TestMeasurementListSerialization:
 
 
 class TestMeasurementListValidation:
+    """Ensure all pagination fields and measurements are required."""
+
     def test_missing_count_raises(self):
         with pytest.raises(ValidationError):
             MeasurementList(total=0, limit=1000, offset=0, measurements=[])

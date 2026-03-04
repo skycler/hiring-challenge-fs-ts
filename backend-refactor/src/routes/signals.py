@@ -2,10 +2,10 @@
 
 Endpoints
 ---------
-- ``GET /signals`` — list all signals
-- ``GET /signals/{signal_id}`` — get a single signal by ID
-- ``GET /signals/{signal_id}/stats`` — aggregate statistics for a signal
-- ``GET /signals/{signal_id}/measurements`` — measurements for a signal
+- ``GET /signals`` -- list all signals
+- ``GET /signals/{signal_id}`` -- get a single signal by ID
+- ``GET /signals/{signal_id}/stats`` -- aggregate statistics for a signal
+- ``GET /signals/{signal_id}/measurements`` -- measurements for a signal
 """
 
 from datetime import datetime
@@ -19,6 +19,36 @@ from services.measurement import MeasurementService
 from services.signal import SignalService
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+
+
+# ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+
+
+def _validate_signal_and_dates(
+    signal_id: int,
+    from_date: datetime,
+    to_date: datetime,
+    signal_svc: SignalService,
+    measurement_svc: MeasurementService,
+) -> None:
+    """Raise :class:`HTTPException` if the signal is unknown or the date range is invalid.
+
+    Centralises the guard logic shared by the ``/stats`` and
+    ``/measurements`` endpoints so validation rules stay consistent.
+    """
+    if signal_svc.find_by_id(signal_id) is None:
+        raise HTTPException(status_code=404, detail=f"Signal {signal_id!r} not found")
+    try:
+        measurement_svc.validate_date_range(from_date, to_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+# ------------------------------------------------------------------
+# Endpoints
+# ------------------------------------------------------------------
 
 
 @router.get("", response_model=list[Signal], response_model_by_alias=False)
@@ -63,12 +93,7 @@ async def get_signal_stats(
     measurement_svc: MeasurementService = Depends(get_measurement_service),
 ) -> SignalStats:
     """Calculate aggregate statistics for a signal over a date range."""
-    if signal_svc.find_by_id(signal_id) is None:
-        raise HTTPException(status_code=404, detail=f"Signal {signal_id!r} not found")
-    try:
-        measurement_svc.validate_date_range(from_date, to_date)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from None
+    _validate_signal_and_dates(signal_id, from_date, to_date, signal_svc, measurement_svc)
     return measurement_svc.calculate_signal_stats(signal_id, from_date, to_date)
 
 
@@ -91,12 +116,7 @@ async def get_signal_measurements(
     measurement_svc: MeasurementService = Depends(get_measurement_service),
 ) -> MeasurementList:
     """Return measurements for a signal within a date range."""
-    if signal_svc.find_by_id(signal_id) is None:
-        raise HTTPException(status_code=404, detail=f"Signal {signal_id!r} not found")
-    try:
-        measurement_svc.validate_date_range(from_date, to_date)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from None
+    _validate_signal_and_dates(signal_id, from_date, to_date, signal_svc, measurement_svc)
     return measurement_svc.get_measurements(
         [signal_id], from_date, to_date, limit=limit, offset=offset
     )

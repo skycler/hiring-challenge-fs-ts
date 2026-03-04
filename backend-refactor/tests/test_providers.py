@@ -81,6 +81,8 @@ MEASUREMENT_CSV = textwrap.dedent("""\
 
 
 class TestDataProviderABC:
+    """DataProvider cannot be instantiated; subclasses must implement all methods."""
+
     def test_cannot_instantiate(self):
         with pytest.raises(TypeError):
             DataProvider()  # type: ignore[abstract]
@@ -139,6 +141,8 @@ class TestDataProviderABC:
 
 
 class TestFileSystemProviderSignals:
+    """FileSystemProvider.load_signals: parsing, caching, and error handling."""
+
     def test_returns_list_of_signal(self):
         m = mock_open(read_data=SIGNAL_JSON)
         provider = FileSystemProvider()
@@ -195,6 +199,8 @@ class TestFileSystemProviderSignals:
 
 
 class TestFileSystemProviderAssets:
+    """FileSystemProvider.load_assets: parsing, caching, and error handling."""
+
     def test_returns_list_of_asset(self):
         m = mock_open(read_data=ASSET_JSON)
         provider = FileSystemProvider()
@@ -251,6 +257,8 @@ class TestFileSystemProviderAssets:
 
 
 class TestFileSystemProviderMeasurements:
+    """FileSystemProvider.load_measurements: CSV parsing, caching, and error handling."""
+
     def test_returns_list_of_measurement(self):
         m = mock_open(read_data=MEASUREMENT_CSV)
         provider = FileSystemProvider()
@@ -313,6 +321,8 @@ class TestFileSystemProviderMeasurements:
 
 
 class TestGetProvider:
+    """get_provider returns a singleton FileSystemProvider instance."""
+
     def setup_method(self):
         # Reset the module-level singleton before each test
         import providers
