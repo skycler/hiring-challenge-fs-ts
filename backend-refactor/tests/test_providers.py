@@ -317,14 +317,15 @@ class TestFileSystemProviderMeasurements:
 
     def test_csv_row_limit_exceeded(self, tmp_path, monkeypatch):
         """Loading more than MAX_MEASUREMENT_ROWS raises ValueError."""
-        from providers.filesystem import MAX_MEASUREMENT_ROWS
+        import providers.filesystem as fs_mod
 
+        test_limit = 5
+        monkeypatch.setattr(fs_mod, "MAX_MEASUREMENT_ROWS", test_limit)
         monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
-        # Create a tiny settings where data_dir covers tmp_path
         csv_file = tmp_path / "measurements.csv"
         header = "Ts|SignalId|MeasurementValue\n"
         row = "2021-11-07 23:59:03.762|100|116,129\n"
-        csv_file.write_text(header + row * (MAX_MEASUREMENT_ROWS + 1))
+        csv_file.write_text(header + row * (test_limit + 1))
 
         settings = Settings(
             data_dir=str(tmp_path),

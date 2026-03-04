@@ -101,7 +101,7 @@ Run the integration tests in docker with
 docker compose run --build integration-tests
 ```
 
-## Performance and Security (20min)
+## Performance and Security (30min)
 - New output format query parameter for measurements endpoint to return a flat list of data points instead of a nested structure. This is more efficient and easier to work with for clients.
 - Add pagination to the measurements endpoint to avoid returning too much data at once, which can cause performance issues and make it harder for clients to work with the data.
 - Improve search logic to get rid of O(n) complexity and use a more efficient data structure (e.g., a dictionary) to store the data in memory, which will significantly improve the performance of the endpoints.
@@ -112,3 +112,7 @@ docker compose run --build integration-tests
 - Add guardrails for the measurements endpoint to prevent potential performance issues (e.g., limit the number of signal ids that can be queried at once, limit the date range for queries, etc.)
 - Sandboxing path env vars to prevent potential security issues (e.g., path traversal attacks, etc.)
 - All other security concerns like rate limiting, CORS middleware are considered to be a deployment concern and should be handled by the infrastructure team (e.g., API gateway, load balancer, etc.) rather than the application itself.
+
+## Documentation (20min)
+- Compose specs.md file to document the API endpoints, data models, and any other relevant information about the application. This will help other developers understand how to use the API and maintain the codebase in the future.
+- 
