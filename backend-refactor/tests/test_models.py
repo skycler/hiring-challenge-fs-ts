@@ -1,4 +1,4 @@
-"""Tests for all Pydantic models (Asset, Signal, SignalStats, Measurement, MeasurementList)."""
+"""Tests for all Pydantic models (Asset, Signal, SignalStats, Measurement, MeasurementList, FlatMeasurementList)."""
 
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from models.asset import Asset
-from models.measurement import Measurement, MeasurementList
+from models.measurement import FlatMeasurementList, Measurement, MeasurementList, ResponseFormat
 from models.signal import Signal, SignalStats
 
 # ===========================================================================
@@ -842,3 +842,161 @@ class TestMeasurementListValidation:
     def test_missing_offset_raises(self):
         with pytest.raises(ValidationError):
             MeasurementList(total=0, count=0, limit=1000, measurements=[])
+
+
+# ===========================================================================
+# ResponseFormat
+# ===========================================================================
+
+
+class TestResponseFormat:
+    """ResponseFormat enum values and string coercion."""
+
+    def test_objects_value(self):
+        assert ResponseFormat.OBJECTS == "objects"
+        assert ResponseFormat.OBJECTS.value == "objects"
+
+    def test_flat_value(self):
+        assert ResponseFormat.FLAT == "flat"
+        assert ResponseFormat.FLAT.value == "flat"
+
+    def test_from_string(self):
+        assert ResponseFormat("objects") is ResponseFormat.OBJECTS
+        assert ResponseFormat("flat") is ResponseFormat.FLAT
+
+    def test_invalid_value_raises(self):
+        with pytest.raises(ValueError):
+            ResponseFormat("invalid")
+
+    def test_is_str(self):
+        assert isinstance(ResponseFormat.OBJECTS, str)
+        assert isinstance(ResponseFormat.FLAT, str)
+
+
+# ===========================================================================
+# FlatMeasurementList
+# ===========================================================================
+
+
+class TestFlatMeasurementListConstruction:
+    """Construct FlatMeasurementList with data and empty."""
+
+    def test_construct_with_data(self):
+        fl = FlatMeasurementList(
+            total=3,
+            count=3,
+            limit=1000,
+            offset=0,
+            timestamps=[
+                datetime(2023, 1, 15, 10, 30),
+                datetime(2023, 1, 15, 10, 31),
+                datetime(2023, 1, 15, 10, 32),
+            ],
+            signal_ids=[100001, 100001, 100001],
+            values=[230.5, 231.0, 229.8],
+        )
+        assert fl.count == 3
+        assert len(fl.timestamps) == 3
+        assert len(fl.signal_ids) == 3
+        assert len(fl.values) == 3
+
+    def test_construct_empty(self):
+        fl = FlatMeasurementList(
+            total=0,
+            count=0,
+            limit=1000,
+            offset=0,
+            timestamps=[],
+            signal_ids=[],
+            values=[],
+        )
+        assert fl.count == 0
+        assert fl.timestamps == []
+        assert fl.signal_ids == []
+        assert fl.values == []
+
+    def test_pagination_fields(self):
+        fl = FlatMeasurementList(
+            total=50,
+            count=3,
+            limit=10,
+            offset=20,
+            timestamps=[datetime(2023, 1, 15)] * 3,
+            signal_ids=[100] * 3,
+            values=[1.0] * 3,
+        )
+        assert fl.total == 50
+        assert fl.limit == 10
+        assert fl.offset == 20
+
+    def test_model_validate(self):
+        data = {
+            "total": 2,
+            "count": 2,
+            "limit": 1000,
+            "offset": 0,
+            "timestamps": ["2023-01-15T10:30:00", "2023-01-15T10:31:00"],
+            "signal_ids": [100001, 100001],
+            "values": [230.5, 231.0],
+        }
+        fl = FlatMeasurementList.model_validate(data)
+        assert fl.count == 2
+        assert fl.values[0] == pytest.approx(230.5)
+
+
+class TestFlatMeasurementListSerialization:
+    """Verify FlatMeasurementList dump and JSON round-trip behaviour."""
+
+    def test_dump_contains_parallel_arrays(self):
+        fl = FlatMeasurementList(
+            total=2,
+            count=2,
+            limit=1000,
+            offset=0,
+            timestamps=[datetime(2023, 1, 15, 10, 30), datetime(2023, 1, 15, 10, 31)],
+            signal_ids=[100001, 100001],
+            values=[230.5, 231.0],
+        )
+        d = fl.model_dump()
+        assert "timestamps" in d
+        assert "signal_ids" in d
+        assert "values" in d
+        assert "measurements" not in d
+
+    def test_json_round_trip(self):
+        fl = FlatMeasurementList(
+            total=2,
+            count=2,
+            limit=1000,
+            offset=0,
+            timestamps=[datetime(2023, 1, 15, 10, 30), datetime(2023, 1, 15, 10, 31)],
+            signal_ids=[100001, 100001],
+            values=[230.5, 231.0],
+        )
+        json_str = fl.model_dump_json()
+        fl2 = FlatMeasurementList.model_validate_json(json_str)
+        assert fl == fl2
+
+
+class TestFlatMeasurementListValidation:
+    """Ensure all fields are required on FlatMeasurementList."""
+
+    def test_missing_timestamps_raises(self):
+        with pytest.raises(ValidationError):
+            FlatMeasurementList(total=0, count=0, limit=1000, offset=0, signal_ids=[], values=[])
+
+    def test_missing_signal_ids_raises(self):
+        with pytest.raises(ValidationError):
+            FlatMeasurementList(total=0, count=0, limit=1000, offset=0, timestamps=[], values=[])
+
+    def test_missing_values_raises(self):
+        with pytest.raises(ValidationError):
+            FlatMeasurementList(
+                total=0, count=0, limit=1000, offset=0, timestamps=[], signal_ids=[]
+            )
+
+    def test_missing_total_raises(self):
+        with pytest.raises(ValidationError):
+            FlatMeasurementList(
+                count=0, limit=1000, offset=0, timestamps=[], signal_ids=[], values=[]
+            )

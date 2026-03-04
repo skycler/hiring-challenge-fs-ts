@@ -1,8 +1,36 @@
-"""Measurement models."""
+"""Measurement models.
+
+Defines the core :class:`Measurement` model and two response-list variants:
+
+- :class:`MeasurementList` — traditional array-of-objects format
+  (``format=objects``, the default).
+- :class:`FlatMeasurementList` — parallel-arrays / columnar format
+  (``format=flat``), significantly more compact for large payloads.
+
+Both list variants inherit shared pagination fields from
+:class:`PaginatedBase`.
+
+The :class:`ResponseFormat` enum lets callers choose between them via
+a ``format`` query parameter.
+"""
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+class ResponseFormat(str, Enum):
+    """Supported serialisation layouts for measurement list responses.
+
+    - ``objects`` — each measurement is a JSON object with ``timestamp``,
+      ``signal_id``, and ``value`` keys (default, backward-compatible).
+    - ``flat`` — three parallel arrays (``timestamps``, ``signal_ids``,
+      ``values``), eliminating per-row key repetition.
+    """
+
+    OBJECTS = "objects"
+    FLAT = "flat"
 
 
 class Measurement(BaseModel):
@@ -21,21 +49,15 @@ class Measurement(BaseModel):
     value: float = Field(alias="MeasurementValue", examples=[230.5])
 
 
-class MeasurementList(BaseModel):
-    """A paginated list of measurements for one or more signals.
+class PaginatedBase(BaseModel):
+    """Shared pagination fields for measurement list responses.
 
-    Used as the response model for endpoints that return measurement
-    time-series data.  Each :class:`Measurement` already carries its own
-    ``signal_id``, so the wrapper intentionally omits a top-level signal
-    identifier — this lets the same model serve both single-signal
-    (``GET /signals/{id}/measurements``) and multi-signal
-    (``GET /measurements?signal_ids=1,2,3``) responses.
-
-    Pagination fields:
+    Both :class:`MeasurementList` and :class:`FlatMeasurementList` inherit
+    these fields so that pagination metadata is defined in one place.
 
     - ``total`` — total number of measurements matching the query (before
       pagination).
-    - ``count`` — number of measurements in this page (``len(measurements)``).
+    - ``count`` — number of measurements in this page.
     - ``limit`` — maximum number of measurements per page.
     - ``offset`` — zero-based offset into the full result set.
     """
@@ -44,4 +66,32 @@ class MeasurementList(BaseModel):
     count: int = Field(description="Measurements in this page", examples=[50])
     limit: int = Field(description="Page size", examples=[1000])
     offset: int = Field(description="Page offset", examples=[0])
+
+
+class MeasurementList(PaginatedBase):
+    """A paginated list of measurements (array-of-objects format).
+
+    Used as the response model for endpoints that return measurement
+    time-series data when ``format=objects`` (the default).
+    """
+
     measurements: list[Measurement] = Field(examples=[[]])
+
+
+class FlatMeasurementList(PaginatedBase):
+    """A paginated list of measurements (parallel-arrays / flat format).
+
+    Returned when ``format=flat``.  Instead of an array of objects, the
+    three measurement fields are each represented as a single array,
+    eliminating the per-row repetition of JSON keys.  The *i*-th element
+    in ``timestamps``, ``signal_ids``, and ``values`` corresponds to the
+    same measurement.
+    """
+
+    timestamps: list[datetime] = Field(
+        description="Measurement timestamps", examples=[["2023-01-15T10:30:00"]]
+    )
+    signal_ids: list[int] = Field(
+        description="Signal IDs corresponding to each measurement", examples=[[100001]]
+    )
+    values: list[float] = Field(description="Measurement values", examples=[[230.5]])

@@ -9,7 +9,12 @@ import statistics
 from collections import defaultdict
 from datetime import datetime
 
-from models.measurement import Measurement, MeasurementList
+from models.measurement import (
+    FlatMeasurementList,
+    Measurement,
+    MeasurementList,
+    ResponseFormat,
+)
 from models.signal import SignalStats
 from providers.base import DataProvider
 
@@ -94,15 +99,39 @@ class MeasurementService:
         *,
         limit: int = 1000,
         offset: int = 0,
-    ) -> MeasurementList:
+        fmt: ResponseFormat = ResponseFormat.OBJECTS,
+    ) -> MeasurementList | FlatMeasurementList:
         """Get measurements for signals in an optional date range.
 
-        Results are paginated via ``limit`` / ``offset``.  The returned
-        :class:`MeasurementList` includes ``total`` (full count before
-        pagination) so callers can compute page counts.
+        Results are paginated via ``limit`` / ``offset``.
+
+        Args:
+            signal_ids: Signal IDs to include.
+            from_date: Inclusive lower bound on timestamp (optional).
+            to_date: Inclusive upper bound on timestamp (optional).
+            limit: Maximum number of measurements per page.
+            offset: Zero-based offset into the full result set.
+            fmt: Response layout — ``objects`` (default) returns a
+                :class:`MeasurementList`; ``flat`` returns a
+                :class:`FlatMeasurementList` with parallel arrays.
+
+        Returns:
+            A paginated measurement response in the requested format.
         """
         filtered = self._filter_measurements(signal_ids, from_date, to_date)
         page = filtered[offset : offset + limit]
+
+        if fmt is ResponseFormat.FLAT:
+            return FlatMeasurementList(
+                total=len(filtered),
+                count=len(page),
+                limit=limit,
+                offset=offset,
+                timestamps=[m.timestamp for m in page],
+                signal_ids=[m.signal_id for m in page],
+                values=[m.value for m in page],
+            )
+
         return MeasurementList(
             total=len(filtered),
             count=len(page),

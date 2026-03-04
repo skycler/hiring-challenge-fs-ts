@@ -255,6 +255,55 @@ class TestGetSignalMeasurements:
         assert r.status_code == 422
 
 
+class TestGetSignalMeasurementsFlat:
+    """GET /signals/{id}/measurements?format=flat returns parallel arrays."""
+
+    def test_flat_format(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=flat"
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert "timestamps" in data
+        assert "signal_ids" in data
+        assert "values" in data
+        assert "measurements" not in data
+        assert data["count"] == 2
+        assert len(data["timestamps"]) == 2
+        assert len(data["signal_ids"]) == 2
+        assert len(data["values"]) == 2
+
+    def test_flat_pagination_metadata(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=flat"
+        )
+        data = r.json()
+        assert data["total"] == 2
+        assert data["limit"] == 1000
+        assert data["offset"] == 0
+
+    def test_objects_format_explicit(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=objects"
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert "measurements" in data
+        assert "timestamps" not in data
+
+    def test_default_format_is_objects(self, client):
+        r = client.get("/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00")
+        data = r.json()
+        assert "measurements" in data
+        assert "timestamps" not in data
+
+    def test_invalid_format_422(self, client):
+        r = client.get(
+            "/signals/100/measurements?from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=invalid"
+        )
+        assert r.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # Measurements (multi-signal)
 # ---------------------------------------------------------------------------
@@ -345,5 +394,54 @@ class TestGetMeasurements:
     def test_offset_validation(self, client):
         r = client.get(
             "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&offset=-1"
+        )
+        assert r.status_code == 422
+
+
+class TestGetMeasurementsFlat:
+    """GET /measurements?format=flat returns parallel arrays."""
+
+    def test_flat_format(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100,200&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=flat"
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert "timestamps" in data
+        assert "signal_ids" in data
+        assert "values" in data
+        assert "measurements" not in data
+        assert data["count"] == 2
+        assert len(data["timestamps"]) == 2
+
+    def test_flat_pagination_metadata(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=flat"
+        )
+        data = r.json()
+        assert data["total"] == 2
+        assert data["limit"] == 1000
+        assert data["offset"] == 0
+
+    def test_objects_format_explicit(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=objects"
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert "measurements" in data
+        assert "timestamps" not in data
+
+    def test_default_format_is_objects(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00"
+        )
+        data = r.json()
+        assert "measurements" in data
+        assert "timestamps" not in data
+
+    def test_invalid_format_422(self, client):
+        r = client.get(
+            "/measurements?signal_ids=100&from=2021-01-01T00:00:00&to=2021-12-31T00:00:00&format=invalid"
         )
         assert r.status_code == 422

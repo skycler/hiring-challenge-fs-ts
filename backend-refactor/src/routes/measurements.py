@@ -9,7 +9,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from models.measurement import MeasurementList
+from models.measurement import FlatMeasurementList, MeasurementList, ResponseFormat
 from services import get_measurement_service, get_signal_service
 from services.measurement import MeasurementService
 from services.signal import SignalService
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/measurements", tags=["measurements"])
 
 @router.get(
     "",
-    response_model=MeasurementList,
+    response_model=MeasurementList | FlatMeasurementList,
     response_model_by_alias=False,
     responses={
         400: {"description": "Invalid signal IDs or date range"},
@@ -32,9 +32,12 @@ async def get_measurements(
     to_date: datetime = Query(..., alias="to", description="End datetime (ISO 8601)"),
     limit: int = Query(1000, ge=1, le=10000, description="Maximum results per page"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
+    fmt: ResponseFormat = Query(
+        ResponseFormat.OBJECTS, alias="format", description="Response layout: objects or flat"
+    ),
     signal_svc: SignalService = Depends(get_signal_service),
     measurement_svc: MeasurementService = Depends(get_measurement_service),
-) -> MeasurementList:
+) -> MeasurementList | FlatMeasurementList:
     """Return paginated measurements for one or more signals within a date range.
 
     The ``signal_ids`` query parameter accepts a comma-separated string of
@@ -68,5 +71,5 @@ async def get_measurements(
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
     return measurement_svc.get_measurements(
-        id_list, from_date, to_date, limit=limit, offset=offset
+        id_list, from_date, to_date, limit=limit, offset=offset, fmt=fmt
     )

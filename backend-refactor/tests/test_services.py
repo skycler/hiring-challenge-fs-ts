@@ -9,7 +9,7 @@ from datetime import datetime
 import pytest
 from conftest import StubProvider
 from models.asset import Asset
-from models.measurement import Measurement, MeasurementList
+from models.measurement import FlatMeasurementList, Measurement, MeasurementList, ResponseFormat
 from models.signal import Signal, SignalStats
 from services import get_asset_service, get_measurement_service, get_signal_service
 from services.asset import AssetService
@@ -318,6 +318,82 @@ class TestGetMeasurements:
         assert result.total == 3
         assert result.count == 0
         assert result.measurements == []
+
+
+# ===========================================================================
+# MeasurementService — get_measurements (flat format)
+# ===========================================================================
+
+
+class TestGetMeasurementsFlat:
+    """get_measurements with fmt=FLAT returns a FlatMeasurementList."""
+
+    def test_returns_flat_measurement_list(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100], fmt=ResponseFormat.FLAT)
+        assert isinstance(result, FlatMeasurementList)
+
+    def test_parallel_arrays_length(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100], fmt=ResponseFormat.FLAT)
+        assert len(result.timestamps) == 3
+        assert len(result.signal_ids) == 3
+        assert len(result.values) == 3
+
+    def test_values_match_objects_format(self):
+        svc = _make_measurement_svc()
+        obj_result = svc.get_measurements([100], fmt=ResponseFormat.OBJECTS)
+        flat_result = svc.get_measurements([100], fmt=ResponseFormat.FLAT)
+        assert flat_result.timestamps == [m.timestamp for m in obj_result.measurements]
+        assert flat_result.signal_ids == [m.signal_id for m in obj_result.measurements]
+        assert flat_result.values == [m.value for m in obj_result.measurements]
+
+    def test_pagination_metadata(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100], fmt=ResponseFormat.FLAT)
+        assert result.total == 3
+        assert result.count == 3
+        assert result.limit == 1000
+        assert result.offset == 0
+
+    def test_custom_limit(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100], limit=2, fmt=ResponseFormat.FLAT)
+        assert result.total == 3
+        assert result.count == 2
+        assert len(result.values) == 2
+
+    def test_custom_offset(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100], offset=1, fmt=ResponseFormat.FLAT)
+        assert result.total == 3
+        assert result.count == 2
+        assert len(result.values) == 2
+
+    def test_empty_result(self):
+        svc = _make_empty_measurement_svc()
+        result = svc.get_measurements([999], fmt=ResponseFormat.FLAT)
+        assert result.total == 0
+        assert result.count == 0
+        assert result.timestamps == []
+        assert result.signal_ids == []
+        assert result.values == []
+
+    def test_date_filters_applied(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements(
+            [100],
+            from_date=datetime(2021, 11, 7, 10, 30),
+            to_date=datetime(2021, 11, 7, 12, 30),
+            fmt=ResponseFormat.FLAT,
+        )
+        assert result.total == 2
+        assert result.count == 2
+
+    def test_default_format_is_objects(self):
+        svc = _make_measurement_svc()
+        result = svc.get_measurements([100])
+        assert isinstance(result, MeasurementList)
 
 
 # ===========================================================================

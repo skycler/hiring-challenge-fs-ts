@@ -12,7 +12,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from models.measurement import MeasurementList
+from models.measurement import FlatMeasurementList, MeasurementList, ResponseFormat
 from models.signal import Signal, SignalStats
 from services import get_measurement_service, get_signal_service
 from services.measurement import MeasurementService
@@ -99,7 +99,7 @@ async def get_signal_stats(
 
 @router.get(
     "/{signal_id}/measurements",
-    response_model=MeasurementList,
+    response_model=MeasurementList | FlatMeasurementList,
     response_model_by_alias=False,
     responses={
         400: {"description": "Invalid date range"},
@@ -112,11 +112,14 @@ async def get_signal_measurements(
     to_date: datetime = Query(..., alias="to", description="End datetime (ISO 8601)"),
     limit: int = Query(1000, ge=1, le=10000, description="Maximum results per page"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
+    fmt: ResponseFormat = Query(
+        ResponseFormat.OBJECTS, alias="format", description="Response layout: objects or flat"
+    ),
     signal_svc: SignalService = Depends(get_signal_service),
     measurement_svc: MeasurementService = Depends(get_measurement_service),
-) -> MeasurementList:
+) -> MeasurementList | FlatMeasurementList:
     """Return measurements for a signal within a date range."""
     _validate_signal_and_dates(signal_id, from_date, to_date, signal_svc, measurement_svc)
     return measurement_svc.get_measurements(
-        [signal_id], from_date, to_date, limit=limit, offset=offset
+        [signal_id], from_date, to_date, limit=limit, offset=offset, fmt=fmt
     )
