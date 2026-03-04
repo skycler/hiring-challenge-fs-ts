@@ -24,7 +24,7 @@ Todo:
 
 # Time Spent
 
-## Planning (5min)
+## Planning (10min)
 Checkout code, understand the structure, and plan the tasks.
 
 ## Containerization & Modernization (20min)
@@ -47,7 +47,7 @@ docker run -d --rm --name asset-api -p 8000:8000 asset-api
 
 - Introduce *uv.lock* file to lock dependencies and ensure reproducible builds. Update the dependencies with `uv lock` and commit the changes to version control.
 
-## Understanding the Endpoints and Data Model (20min)
+## Understanding the Endpoints and Data Model (30min)
 - Inspecting swagger page at http://localhost:8000/docs to understand the available endpoints and their functionality
 - huge mess! duplication of endpoints, v1 vs v2, easter egg within the health endpoint, etc.
 - /assets endpoint does not return the assets, but instead returns signal information.
@@ -89,7 +89,7 @@ docker compose run --build unit-tests
 - Seperate concerns between data, business, and actual application logic
 - Change asset and signal ids to be ints instead of strings, which is more common and easier to work with
 
-## Error Handling, Logging, integ tests, and Cleanup (30min)
+## Error Handling, Logging, integ tests, and Cleanup (60min)
 - Add error handling for all endpoints, including validation errors, not found errors, and internal server errors.
 - Add logging
 - Do overall cleanup
@@ -107,4 +107,8 @@ docker compose run --build integration-tests
 - Improve search logic to get rid of O(n) complexity and use a more efficient data structure (e.g., a dictionary) to store the data in memory, which will significantly improve the performance of the endpoints.
 - No Pydantic model for chached measurements, simple named tuple instead, which is more efficient and easier to work with for this use case.
 - Add warmup logic to the application to pre-load the data into memory when the application starts, which will improve the performance of the endpoints and reduce the response time for clients.
-- 
+- Concerning Security: since this is a simple API that reads data from files and does not have any user input or authentication, there are no major security issues to address. However, in a production environment, it would be important to implement proper access controls and authentication mechanisms to protect the data and prevent unauthorized access.
+- Update FastAPI to 0.115.11 (known CVE)
+- Add guardrails for the measurements endpoint to prevent potential performance issues (e.g., limit the number of signal ids that can be queried at once, limit the date range for queries, etc.)
+- Sandboxing path env vars to prevent potential security issues (e.g., path traversal attacks, etc.)
+- All other security concerns like rate limiting, CORS middleware are considered to be a deployment concern and should be handled by the infrastructure team (e.g., API gateway, load balancer, etc.) rather than the application itself.

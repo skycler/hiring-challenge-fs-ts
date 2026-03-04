@@ -40,5 +40,5 @@ async def get_asset_signals(
         HTTPException 404: If no asset with *asset_id* exists.
     """
     if asset_svc.find_by_id(asset_id) is None:
-        raise HTTPException(status_code=404, detail=f"Asset {asset_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found")
     return signal_svc.find_by_asset_id(asset_id)

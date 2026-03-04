@@ -53,6 +53,13 @@ async def get_measurements(
     if not stripped:
         raise HTTPException(status_code=400, detail="At least one signal_id is required")
 
+    MAX_SIGNAL_IDS = 100
+    if len(stripped) > MAX_SIGNAL_IDS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many signal_ids (max {MAX_SIGNAL_IDS})",
+        )
+
     try:
         id_list = [int(sid) for sid in stripped]
     except ValueError:
@@ -62,7 +69,7 @@ async def get_measurements(
     if unknown:
         raise HTTPException(
             status_code=404,
-            detail=f"Signal(s) {unknown} not found",
+            detail=f"Signal(s) {', '.join(map(str, unknown))} not found",
         )
 
     try:

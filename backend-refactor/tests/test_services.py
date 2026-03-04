@@ -102,6 +102,13 @@ class TestAssetServiceFindById:
         assert asset is not None
         assert asset.asset_id == 2
 
+    def test_runtime_error_if_index_none_after_ensure(self):
+        """Defensive guard: RuntimeError if _by_id is somehow None after _ensure_index."""
+        svc = AssetService(_stub_provider)
+        svc._ensure_index = lambda: None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError, match="Asset index was not built"):
+            svc.find_by_id(1)
+
 
 # ===========================================================================
 # SignalService
@@ -132,6 +139,13 @@ class TestSignalServiceFindByAssetId:
         svc = SignalService(StubProvider())
         result = svc.find_by_asset_id(1)
         assert result == []
+
+    def test_runtime_error_if_by_asset_id_none(self):
+        """Defensive guard: RuntimeError if _by_asset_id is somehow None."""
+        svc = SignalService(_stub_provider)
+        svc._ensure_indexes = lambda: None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError, match="Signal indexes were not built"):
+            svc.find_by_asset_id(1)
 
 
 class TestSignalServiceGetAll:
@@ -171,6 +185,13 @@ class TestSignalServiceFindById:
         assert signal is not None
         assert signal.signal_id == 200
 
+    def test_runtime_error_if_by_id_none_after_ensure(self):
+        """Defensive guard: RuntimeError if _by_id is somehow None after _ensure_indexes."""
+        svc = SignalService(_stub_provider)
+        svc._ensure_indexes = lambda: None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError, match="Signal indexes were not built"):
+            svc.find_by_id(100)
+
 
 class TestSignalServiceFindUnknownIds:
     """SignalService.find_unknown_ids returns IDs not present in the dataset."""
@@ -190,6 +211,13 @@ class TestSignalServiceFindUnknownIds:
     def test_empty_list(self):
         svc = SignalService(_stub_provider)
         assert svc.find_unknown_ids([]) == []
+
+    def test_runtime_error_if_known_ids_none(self):
+        """Defensive guard: RuntimeError if _known_ids is somehow None."""
+        svc = SignalService(_stub_provider)
+        svc._ensure_indexes = lambda: None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError, match="Signal indexes were not built"):
+            svc.find_unknown_ids([100])
 
 
 # ===========================================================================

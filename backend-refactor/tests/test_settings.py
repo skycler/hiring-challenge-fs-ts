@@ -1,7 +1,10 @@
 """Tests for settings module."""
 
 import os
+from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from settings import Settings
 
@@ -20,6 +23,10 @@ class TestDefaults:
     def test_debug_off_by_default(self):
         s = Settings()
         assert s.debug is False
+
+    def test_data_dir(self):
+        s = Settings()
+        assert s.data_dir == "data"
 
     def test_signals_path(self):
         s = Settings()
@@ -76,3 +83,46 @@ class TestGetCaching:
         s1 = Settings.get()
         s2 = Settings.get()
         assert s1 is s2
+
+
+class TestValidatePath:
+    """Settings.validate_path prevents path traversal."""
+
+    def test_valid_path_inside_data_dir(self, tmp_path, monkeypatch):
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        s = Settings(data_dir=str(data_dir))
+        result = s.validate_path(str(data_dir / "signal.json"))
+        assert result == (data_dir / "signal.json").resolve()
+
+    def test_traversal_rejected(self, tmp_path, monkeypatch):
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        s = Settings(data_dir=str(data_dir))
+        with pytest.raises(ValueError, match="resolves outside the data directory"):
+            s.validate_path(str(data_dir / ".." / "etc" / "passwd"))
+
+    def test_returns_resolved_path(self, tmp_path, monkeypatch):
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        s = Settings(data_dir=str(data_dir))
+        result = s.validate_path(str(data_dir / "subdir" / ".." / "file.json"))
+        assert isinstance(result, Path)
+        assert result == (data_dir / "file.json").resolve()
+
+    def test_data_dir_escape_rejected(self, tmp_path, monkeypatch):
+        """DATA_DIR=/ (or any path outside the project root) is rejected."""
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        s = Settings(data_dir="/")
+        with pytest.raises(ValueError, match="resolves outside the project root"):
+            s.validate_path("/etc/passwd")
+
+    def test_absolute_data_dir_outside_project_rejected(self, tmp_path, monkeypatch):
+        """An absolute data_dir pointing elsewhere is caught."""
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        s = Settings(data_dir="/tmp/evil")
+        with pytest.raises(ValueError, match="resolves outside the project root"):
+            s.validate_path("/tmp/evil/file.json")

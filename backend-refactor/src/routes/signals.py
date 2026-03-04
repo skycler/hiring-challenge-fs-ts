@@ -39,7 +39,7 @@ def _validate_signal_and_dates(
     ``/measurements`` endpoints so validation rules stay consistent.
     """
     if signal_svc.find_by_id(signal_id) is None:
-        raise HTTPException(status_code=404, detail=f"Signal {signal_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Signal {signal_id} not found")
     try:
         measurement_svc.validate_date_range(from_date, to_date)
     except ValueError as exc:
@@ -72,7 +72,7 @@ async def get_signal(
     """Return a single signal by its ID."""
     signal = svc.find_by_id(signal_id)
     if signal is None:
-        raise HTTPException(status_code=404, detail=f"Signal {signal_id!r} not found")
+        raise HTTPException(status_code=404, detail=f"Signal {signal_id} not found")
     return signal
 
 

@@ -9,7 +9,8 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from routes import assets_router, health_router, measurements_router, signals_router
 from services import get_asset_service, get_measurement_service, get_signal_service
@@ -42,16 +43,36 @@ def create_app() -> FastAPI:
         format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
     )
 
+    docs_kwargs: dict[str, str | None] = {}
+    if not settings.debug:
+        docs_kwargs.update(docs_url=None, redoc_url=None, openapi_url=None)
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.api_version,
         lifespan=lifespan,
+        **docs_kwargs,  # type: ignore[arg-type]
     )
+
+    @app.exception_handler(FileNotFoundError)
+    async def _file_not_found_handler(request: Request, exc: FileNotFoundError) -> JSONResponse:
+        """Return a generic 503 when a data file is missing at runtime.
+
+        Avoids leaking internal file-system paths in the response body.
+        """
+        logger.error("Data file missing: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Service temporarily unavailable"},
+        )
 
     app.include_router(health_router)
     app.include_router(assets_router)
     app.include_router(signals_router)
     app.include_router(measurements_router)
+
+    if settings.debug:
+        logger.warning("Debug mode is enabled — do not use in production")
 
     logger.info(
         "%s %s started — debug=%s",

@@ -35,5 +35,6 @@ class AssetService:
     def find_by_id(self, asset_id: int) -> Asset | None:
         """Return the asset with the given ID, or ``None`` if not found.  O(1)."""
         self._ensure_index()
-        assert self._by_id is not None
+        if self._by_id is None:
+            raise RuntimeError("Asset index was not built")
         return self._by_id.get(asset_id)

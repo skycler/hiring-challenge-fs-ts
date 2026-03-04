@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 _M = TypeVar("_M", bound=BaseModel)
 
+#: Hard ceiling on the number of CSV rows we will load to prevent
+#: unbounded memory consumption from a maliciously large file.
+MAX_MEASUREMENT_ROWS: int = 10_000_000
+
 
 class FileSystemProvider(DataProvider):
     """Load domain data from local JSON/CSV files.
@@ -47,15 +51,19 @@ class FileSystemProvider(DataProvider):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _load_json(path: str, model: type[_M]) -> list[_M]:
+    def _load_json(self, path: str, model: type[_M]) -> list[_M]:
         """Read a JSON array from *path* and validate each element as *model*.
+
+        The resolved path is checked against :attr:`Settings.data_dir` to
+        prevent path-traversal attacks.
 
         Raises:
             FileNotFoundError: If *path* does not exist.
             json.JSONDecodeError: If the file is not valid JSON.
-            ValueError: If a record fails Pydantic validation.
+            ValueError: If a record fails Pydantic validation **or** the
+                path escapes the data directory.
         """
+        self._settings.validate_path(path)
         try:
             with open(path, encoding="utf-8") as fh:
                 raw = json.load(fh)
@@ -99,13 +107,22 @@ class FileSystemProvider(DataProvider):
         The CSV is pipe-delimited with European comma decimals
         (e.g. ``116,129`` -> ``116.129``).  Data is stored as lightweight
         :class:`MeasurementTuple` instances to minimise memory usage.
+
+        Raises:
+            ValueError: If the file exceeds :data:`MAX_MEASUREMENT_ROWS` rows
+                or the path escapes the data directory.
         """
         if self._measurements_cache is None:
+            self._settings.validate_path(self._settings.measurements_path)
             measurements: list[MeasurementTuple] = []
             try:
                 with open(self._settings.measurements_path, encoding="utf-8-sig") as f:
                     reader = csv.DictReader(f, delimiter="|")
-                    for row in reader:
+                    for row_num, row in enumerate(reader, start=1):
+                        if row_num > MAX_MEASUREMENT_ROWS:
+                            raise ValueError(
+                                f"CSV exceeds maximum of {MAX_MEASUREMENT_ROWS:,} rows"
+                            )
                         measurements.append(
                             MeasurementTuple(
                                 timestamp=datetime.fromisoformat(row["Ts"]),

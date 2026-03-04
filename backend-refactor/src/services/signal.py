@@ -54,17 +54,20 @@ class SignalService:
     def find_by_id(self, signal_id: int) -> Signal | None:
         """Return the signal with the given ID, or ``None`` if not found.  O(1)."""
         self._ensure_indexes()
-        assert self._by_id is not None  # appeases type checker
+        if self._by_id is None:
+            raise RuntimeError("Signal indexes were not built")
         return self._by_id.get(signal_id)
 
     def find_by_asset_id(self, asset_id: int) -> list[Signal]:
         """Return all signals belonging to the given asset.  O(1)."""
         self._ensure_indexes()
-        assert self._by_asset_id is not None
+        if self._by_asset_id is None:
+            raise RuntimeError("Signal indexes were not built")
         return self._by_asset_id.get(asset_id, [])
 
     def find_unknown_ids(self, signal_ids: list[int]) -> list[int]:
         """Return any IDs from *signal_ids* that don't match a known signal.  O(k)."""
         self._ensure_indexes()
-        assert self._known_ids is not None
+        if self._known_ids is None:
+            raise RuntimeError("Signal indexes were not built")
         return [sid for sid in signal_ids if sid not in self._known_ids]

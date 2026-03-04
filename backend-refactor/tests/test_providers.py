@@ -19,6 +19,7 @@ from models.signal import Signal
 from providers import get_provider
 from providers.base import DataProvider
 from providers.filesystem import FileSystemProvider
+from settings import Settings
 
 # ---------------------------------------------------------------------------
 # Inline fixtures
@@ -312,6 +313,75 @@ class TestFileSystemProviderMeasurements:
         m = mock_open(read_data=bad_csv)
         provider = FileSystemProvider()
         with patch("providers.filesystem.open", m), pytest.raises(KeyError):
+            provider.load_measurements()
+
+    def test_csv_row_limit_exceeded(self, tmp_path, monkeypatch):
+        """Loading more than MAX_MEASUREMENT_ROWS raises ValueError."""
+        from providers.filesystem import MAX_MEASUREMENT_ROWS
+
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        # Create a tiny settings where data_dir covers tmp_path
+        csv_file = tmp_path / "measurements.csv"
+        header = "Ts|SignalId|MeasurementValue\n"
+        row = "2021-11-07 23:59:03.762|100|116,129\n"
+        csv_file.write_text(header + row * (MAX_MEASUREMENT_ROWS + 1))
+
+        settings = Settings(
+            data_dir=str(tmp_path),
+            measurements_path=str(csv_file),
+        )
+        provider = FileSystemProvider(settings=settings)
+        with pytest.raises(ValueError, match="CSV exceeds maximum"):
+            provider.load_measurements()
+
+    def test_path_traversal_blocked_json(self, tmp_path, monkeypatch):
+        """_load_json rejects paths outside the data directory."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        evil_path = str(tmp_path / "data" / ".." / "etc" / "passwd")
+        settings = Settings(data_dir=str(data_dir), signals_path=evil_path)
+        provider = FileSystemProvider(settings=settings)
+        with pytest.raises(ValueError, match="resolves outside"):
+            provider.load_signals()
+
+    def test_path_traversal_blocked_csv(self, tmp_path, monkeypatch):
+        """load_measurements rejects paths outside the data directory."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        evil_path = str(tmp_path / "data" / ".." / "etc" / "passwd")
+        settings = Settings(data_dir=str(data_dir), measurements_path=evil_path)
+        provider = FileSystemProvider(settings=settings)
+        with pytest.raises(ValueError, match="resolves outside"):
+            provider.load_measurements()
+
+    def test_path_traversal_blocked_assets(self, tmp_path, monkeypatch):
+        """load_assets rejects paths outside the data directory."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        evil_path = str(tmp_path / "data" / ".." / "etc" / "passwd")
+        settings = Settings(data_dir=str(data_dir), assets_path=evil_path)
+        provider = FileSystemProvider(settings=settings)
+        with pytest.raises(ValueError, match="resolves outside"):
+            provider.load_assets()
+
+    def test_csv_formula_injection_rejected(self, tmp_path, monkeypatch):
+        """CSV cells containing spreadsheet formula payloads fail float conversion."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setattr(Settings, "_PROJECT_ROOT", tmp_path)
+        csv_file = data_dir / "measurements.csv"
+        csv_file.write_text(
+            'Ts|SignalId|MeasurementValue\n2021-11-07 23:59:03.762|100|=CMD("calc")\n'
+        )
+        settings = Settings(
+            data_dir=str(data_dir),
+            measurements_path=str(csv_file),
+        )
+        provider = FileSystemProvider(settings=settings)
+        with pytest.raises(ValueError):
             provider.load_measurements()
 
 
